@@ -1,0 +1,18 @@
+{
+  "uuid": "bb14a862-8f2c-4a11-89c9-e3abb76a47d7",
+  "display_id": 9,
+  "title": "Implement Gigabyte scraper",
+  "description": "Create src/psp_etl/scrape/gigabyte.py implementing VendorScraper for Gigabyte.\n- Enumerate AM4/AM5 boards from Gigabyte product pages\n- Parse BIOS download links\n- Download ZIPs, extract raw ROM\n- Depends on: scraper base class",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:27.018028556Z",
+  "updated_at": "2026-03-08T17:07:27.018028556Z",
+  "labels": [
+    "scraper"
+  ],
+  "blockers": [
+    "cb54437a-37c3-4438-a40e-6e9ff957d7e5"
+  ],
+  "milestone_uuid": "20705de1-3b87-4be2-807f-14c1fb557b0a"
+}

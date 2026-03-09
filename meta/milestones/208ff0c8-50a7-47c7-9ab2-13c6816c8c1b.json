@@ -1,0 +1,8 @@
+{
+  "uuid": "208ff0c8-50a7-47c7-9ab2-13c6816c8c1b",
+  "display_id": 1,
+  "name": "M1: Core Pipeline",
+  "description": "Given a ROM file on disk, extract all PSP entries, analyze strings, store in DB",
+  "status": "open",
+  "created_at": "2026-03-08T17:05:04.246652095Z"
+}

@@ -1,0 +1,18 @@
+{
+  "uuid": "ac78d705-1589-4ebf-8d95-cfc33acfcd6f",
+  "display_id": 17,
+  "title": "Implement emulator and fuzzer exports",
+  "description": "Add to src/psp_etl/export.py:\n- Emulator export: directory layout matching PSPEmu expectations\n- Fuzzer export: ASPFuzz YAML config generation per firmware image\n- psp-etl export --format emulator|fuzzer --gen <gen> --output-dir <path>",
+  "status": "open",
+  "priority": "low",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:27.093956961Z",
+  "updated_at": "2026-03-08T17:07:27.093956961Z",
+  "labels": [
+    "export"
+  ],
+  "blockers": [
+    "f97be8ee-e027-47e1-88aa-26e606ca098f"
+  ],
+  "milestone_uuid": "7ebe382b-6219-4be6-a13b-5e49da42c9b4"
+}

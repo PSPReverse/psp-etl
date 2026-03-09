@@ -1,0 +1,19 @@
+{
+  "uuid": "6be9b177-3a35-43a1-a13c-31299f6b4d99",
+  "display_id": 14,
+  "title": "Implement primary image selection",
+  "description": "Add select command logic:\n- For each unique (zen_generation, type_id, version) triple:\n  1. Group entries by firmware_md5 (same md5 = identical build)\n  2. For different md5 with same version: compare string scores\n  3. Select entry with highest score as primary\n  4. Log cross-vendor differences (different md5 for same version)\n- Populate primary_images table\n- Depends on: db.py, strings.py",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:27.064600140Z",
+  "updated_at": "2026-03-08T17:07:27.064600140Z",
+  "labels": [
+    "analysis"
+  ],
+  "blockers": [
+    "f97be8ee-e027-47e1-88aa-26e606ca098f",
+    "221f3152-e2cd-421d-acb0-a6705bf39fe0"
+  ],
+  "milestone_uuid": "a1038652-a591-48cc-a70c-01d186579634"
+}

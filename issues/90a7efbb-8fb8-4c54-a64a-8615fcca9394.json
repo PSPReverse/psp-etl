@@ -1,0 +1,20 @@
+{
+  "uuid": "90a7efbb-8fb8-4c54-a64a-8615fcca9394",
+  "display_id": 13,
+  "title": "Wire up scrape CLI command",
+  "description": "Add to cli.py:\n- psp-etl scrape <vendor|all> [--socket am4|am5|all] [--limit N] [--dry-run]\n- Dispatch to appropriate scraper(s)\n- Progress reporting with rich\n- Auto-ingest downloaded ROMs after scraping\n- Depends on: all scrapers, CLI M1",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:27.053370062Z",
+  "updated_at": "2026-03-08T17:07:27.053370062Z",
+  "labels": [
+    "cli",
+    "scraper"
+  ],
+  "blockers": [
+    "bbc1643c-278e-4ec2-bb67-8aa8c465dabf",
+    "2911e131-09ef-4af9-abab-74962af4598c"
+  ],
+  "milestone_uuid": "20705de1-3b87-4be2-807f-14c1fb557b0a"
+}

@@ -1,0 +1,8 @@
+{
+  "uuid": "7ebe382b-6219-4be6-a13b-5e49da42c9b4",
+  "display_id": 4,
+  "name": "M4: Integration Exports",
+  "description": "Export data for downstream tools (Ghidra, emulator, fuzzer)",
+  "status": "open",
+  "created_at": "2026-03-08T17:05:04.300592073Z"
+}

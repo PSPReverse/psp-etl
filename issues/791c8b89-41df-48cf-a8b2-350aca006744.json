@@ -1,0 +1,18 @@
+{
+  "uuid": "791c8b89-41df-48cf-a8b2-350aca006744",
+  "display_id": 16,
+  "title": "Implement Ghidra export",
+  "description": "Add to src/psp_etl/export.py:\n- Export blobs with load addresses and ARM:LE:32:v7 Ghidra config\n- Generate Ghidra project import scripts\n- psp-etl export --format ghidra --gen <gen> --output-dir <path>",
+  "status": "open",
+  "priority": "low",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:27.084683892Z",
+  "updated_at": "2026-03-08T17:07:27.084683892Z",
+  "labels": [
+    "export"
+  ],
+  "blockers": [
+    "f97be8ee-e027-47e1-88aa-26e606ca098f"
+  ],
+  "milestone_uuid": "7ebe382b-6219-4be6-a13b-5e49da42c9b4"
+}

@@ -1,0 +1,20 @@
+{
+  "uuid": "bffd8242-5358-49e3-9d12-5aedb4485e07",
+  "display_id": 15,
+  "title": "Implement stats dashboard and string search",
+  "description": "Enhance stats and query commands:\n- psp-etl stats: images per vendor, entries per generation, encryption rates, score distributions\n- psp-etl query --string 'spiRead': search strings table\n- Cross-vendor diff view: same firmware version, different md5, compare string sets\n- Rich formatted output with tables and charts\n- Depends on: db.py, primary image selection",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:27.073331412Z",
+  "updated_at": "2026-03-08T17:07:27.073331412Z",
+  "labels": [
+    "analysis",
+    "cli"
+  ],
+  "blockers": [
+    "6be9b177-3a35-43a1-a13c-31299f6b4d99",
+    "bbc1643c-278e-4ec2-bb67-8aa8c465dabf"
+  ],
+  "milestone_uuid": "a1038652-a591-48cc-a70c-01d186579634"
+}

@@ -1,0 +1,15 @@
+{
+  "uuid": "c7a1ad31-f3f6-46a7-9d67-16b5b2fbcf47",
+  "display_id": 11,
+  "title": "Implement vendor wrapper extraction (extract.py)",
+  "description": "Create src/psp_etl/scrape/extract.py:\n- ASUS CAP header stripping (strip 0x800-byte capsule header)\n- Generic ZIP extraction with ROM/BIN file detection\n- Validate extracted ROM is parseable by checking for PSP directory signatures\n- Used by all scrapers after download",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:27.035468046Z",
+  "updated_at": "2026-03-08T17:07:27.035468046Z",
+  "labels": [
+    "scraper"
+  ],
+  "milestone_uuid": "20705de1-3b87-4be2-807f-14c1fb557b0a"
+}
