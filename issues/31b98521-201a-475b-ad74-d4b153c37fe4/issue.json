@@ -1,0 +1,17 @@
+{
+  "uuid": "31b98521-201a-475b-ad74-d4b153c37fe4",
+  "display_id": 1,
+  "title": "Fix default.nix: package psptool correctly",
+  "description": "psptool 3.4 uses pyproject.toml not setup.py. Change format from 'setuptools' to 'pyproject' in the nix derivation. Also verify the psp-etl package builds end-to-end. The dev shell should also work (nix-shell -A shell).",
+  "status": "closed",
+  "priority": "high",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:26.941456Z",
+  "updated_at": "2026-03-12T22:20:59.400666442Z",
+  "closed_at": "2026-03-12T22:20:59.400666442Z",
+  "labels": [
+    "nix",
+    "packaging"
+  ],
+  "milestone_uuid": "208ff0c8-50a7-47c7-9ab2-13c6816c8c1b"
+}
