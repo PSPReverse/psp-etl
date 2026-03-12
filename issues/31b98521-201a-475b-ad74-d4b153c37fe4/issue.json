@@ -7,8 +7,8 @@
   "priority": "high",
   "created_by": "driver",
   "created_at": "2026-03-08T17:07:26.941456Z",
-  "updated_at": "2026-03-12T22:20:59.400666442Z",
-  "closed_at": "2026-03-12T22:20:59.400666442Z",
+  "updated_at": "2026-03-12T22:21:03.243724453Z",
+  "closed_at": "2026-03-12T22:21:03.243724453Z",
   "labels": [
     "nix",
     "packaging"
