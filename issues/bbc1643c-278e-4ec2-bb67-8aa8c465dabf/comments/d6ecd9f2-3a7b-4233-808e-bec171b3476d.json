@@ -1,0 +1,8 @@
+{
+  "uuid": "d6ecd9f2-3a7b-4233-808e-bec171b3476d",
+  "issue_uuid": "bbc1643c-278e-4ec2-bb67-8aa8c465dabf",
+  "author": "driver",
+  "content": "Design decisions: (1) --data-dir is a click context param on the top-level group, default ./data. (2) Scrapers are sync (httpx.Client), no async. (3) All blob references in output must show human-readable labels (type_name+version), never raw hashes.",
+  "created_at": "2026-03-08T18:20:06.581425415Z",
+  "kind": "note"
+}

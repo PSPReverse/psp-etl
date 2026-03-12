@@ -1,0 +1,8 @@
+{
+  "uuid": "cdd81e91-1ff7-4365-a2f8-d3d143f71405",
+  "issue_uuid": "cb54437a-37c3-4438-a40e-6e9ff957d7e5",
+  "author": "driver",
+  "content": "Design decision: Scrapers use sync httpx.Client (not async). Methods are regular def, not async def. This simplifies click integration.",
+  "created_at": "2026-03-08T18:20:06.586284508Z",
+  "kind": "note"
+}

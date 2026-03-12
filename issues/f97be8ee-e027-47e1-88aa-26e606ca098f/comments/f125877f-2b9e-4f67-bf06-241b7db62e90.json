@@ -1,0 +1,8 @@
+{
+  "uuid": "f125877f-2b9e-4f67-bf06-241b7db62e90",
+  "issue_uuid": "f97be8ee-e027-47e1-88aa-26e606ca098f",
+  "author": "driver",
+  "content": "Design decision: DB uses PRAGMA user_version for schema versioning. On version mismatch, drop and recreate all tables. No migration library. All data is re-derivable from ROMs via ingest+analyze.",
+  "created_at": "2026-03-08T18:20:06.564539108Z",
+  "kind": "note"
+}

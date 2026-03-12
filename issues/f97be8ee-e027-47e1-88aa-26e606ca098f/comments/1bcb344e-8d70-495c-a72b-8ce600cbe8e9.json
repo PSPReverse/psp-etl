@@ -1,0 +1,8 @@
+{
+  "uuid": "1bcb344e-8d70-495c-a72b-8ce600cbe8e9",
+  "issue_uuid": "f97be8ee-e027-47e1-88aa-26e606ca098f",
+  "author": "driver",
+  "content": "Design decision: string_analysis table keyed by blob_sha256 (not entry_id) for blob-centric analysis. Added entropy REAL column. See .design/psp-etl-architecture.md for full modified schema.",
+  "created_at": "2026-03-08T18:20:06.576544390Z",
+  "kind": "note"
+}
