@@ -1,6 +1,6 @@
 {
   "uuid": "faf48dc0-d79c-4e09-9c72-5a38a9fd1ffb",
-  "display_id": null,
+  "display_id": 19,
   "title": "kickoff run: add --skip-permissions flag to pass --dangerously-skip-permissions to claude",
   "status": "open",
   "priority": "medium",
