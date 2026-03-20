@@ -1,0 +1,25 @@
+{
+  "uuid": "cb54437a-37c3-4438-a40e-6e9ff957d7e5",
+  "display_id": 7,
+  "title": "Implement scraper base class and data models",
+  "description": "Create src/psp_etl/scrape/base.py with:\n- BoardInfo dataclass: vendor, model, socket (AM4/AM5), url\n- BiosUpdate dataclass: board, bios_version, download_url, release_date, agesa_version\n- VendorScraper ABC with: list_boards(), list_bios_updates(board), download(update, dest_dir)\n- Common download logic: SHA-256 dedup, progress reporting, retry with backoff\n- Rate limiting support (per-vendor configurable delay)\n- Use httpx async client",
+  "status": "closed",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:27.000479278Z",
+  "updated_at": "2026-03-20T23:57:33.776791689Z",
+  "closed_at": "2026-03-20T23:57:33.776791689Z",
+  "labels": [
+    "scraper"
+  ],
+  "comments": [
+    {
+      "id": 5,
+      "author": "driver",
+      "content": "Design decision: Scrapers use sync httpx.Client (not async). Methods are regular def, not async def. This simplifies click integration.",
+      "created_at": "2026-03-08T18:20:06.586284508Z",
+      "kind": "note"
+    }
+  ],
+  "milestone_uuid": "20705de1-3b87-4be2-807f-14c1fb557b0a"
+}
