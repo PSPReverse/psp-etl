@@ -3,11 +3,12 @@
   "display_id": 6,
   "title": "Add .gitignore entries for data/ and Python artifacts",
   "description": "Extend .gitignore with:\n- data/ directory (roms, blobs, database)\n- Python: __pycache__, *.pyc, *.egg-info, dist/, build/, .eggs/\n- Nix: result, result-*\n- Virtual envs: .venv/\n- Editor files as appropriate",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-03-08T17:07:26.992144068Z",
-  "updated_at": "2026-03-08T17:07:26.992144068Z",
+  "updated_at": "2026-03-20T23:58:47.056766109Z",
+  "closed_at": "2026-03-20T23:58:47.056766109Z",
   "labels": [
     "chore"
   ],
