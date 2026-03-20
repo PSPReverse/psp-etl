@@ -35,3 +35,13 @@
 .direnv
 **/*.egg-info/**
 result
+
+# Runtime data (large firmware files, not for version control)
+data/
+blobs/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+.venv/

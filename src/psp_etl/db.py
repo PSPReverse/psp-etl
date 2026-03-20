@@ -1,0 +1,548 @@
+"""SQLite schema and query layer for psp-etl."""
+
+from __future__ import annotations
+
+import sqlite3
+from dataclasses import dataclass
+from pathlib import Path
+
+
+# ---------------------------------------------------------------------------
+# Dataclasses
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Image:
+    sha256: str
+    vendor: str
+    model: str | None = None
+    socket: str | None = None
+    bios_version: str | None = None
+    agesa_version: str | None = None
+    download_url: str | None = None
+    file_size: int | None = None
+    download_date: str | None = None
+    rom_count: int = 1
+    id: int | None = None
+
+
+@dataclass
+class Entry:
+    image_id: int
+    type_id: int
+    rom_index: int = 0
+    directory_index: int | None = None
+    directory_magic: str | None = None
+    zen_generation: str | None = None
+    type_name: str | None = None
+    subprogram: int = 0
+    instance: int = 0
+    version: str | None = None
+    firmware_md5: str | None = None
+    blob_sha256: str | None = None
+    body_size: int | None = None
+    encrypted: bool = False
+    compressed: bool = False
+    signed: bool = False
+    load_address: int | None = None
+    id: int | None = None
+
+
+@dataclass
+class StringAnalysis:
+    entry_id: int
+    total_strings: int
+    unique_strings: int
+    format_strings: int
+    function_names: int
+    error_messages: int
+    postcode_strings: int
+    descriptive_strings: int
+    score: float
+    id: int | None = None
+
+
+@dataclass
+class ParseError:
+    image_id: int
+    error_message: str | None = None
+    traceback: str | None = None
+    id: int | None = None
+
+
+@dataclass
+class PrimaryImage:
+    zen_generation: str
+    type_id: int
+    version: str
+    best_entry_id: int | None = None
+    best_image_id: int | None = None
+    score: float | None = None
+    id: int | None = None
+
+
+# ---------------------------------------------------------------------------
+# Schema
+# ---------------------------------------------------------------------------
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS images (
+    id INTEGER PRIMARY KEY,
+    sha256 TEXT UNIQUE NOT NULL,
+    vendor TEXT NOT NULL,
+    model TEXT,
+    socket TEXT,
+    bios_version TEXT,
+    agesa_version TEXT,
+    download_url TEXT,
+    file_size INTEGER,
+    download_date TEXT,
+    rom_count INTEGER DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS entries (
+    id INTEGER PRIMARY KEY,
+    image_id INTEGER REFERENCES images(id),
+    rom_index INTEGER DEFAULT 0,
+    directory_index INTEGER,
+    directory_magic TEXT,
+    zen_generation TEXT,
+    type_id INTEGER NOT NULL,
+    type_name TEXT,
+    subprogram INTEGER DEFAULT 0,
+    instance INTEGER DEFAULT 0,
+    version TEXT,
+    firmware_md5 TEXT,
+    blob_sha256 TEXT,
+    body_size INTEGER,
+    encrypted BOOLEAN DEFAULT FALSE,
+    compressed BOOLEAN DEFAULT FALSE,
+    signed BOOLEAN DEFAULT FALSE,
+    load_address INTEGER,
+    UNIQUE(image_id, rom_index, directory_index, type_id, subprogram, instance)
+);
+
+CREATE TABLE IF NOT EXISTS string_analysis (
+    id INTEGER PRIMARY KEY,
+    entry_id INTEGER REFERENCES entries(id) UNIQUE,
+    total_strings INTEGER,
+    unique_strings INTEGER,
+    format_strings INTEGER,
+    function_names INTEGER,
+    error_messages INTEGER,
+    postcode_strings INTEGER,
+    descriptive_strings INTEGER,
+    score REAL
+);
+
+CREATE TABLE IF NOT EXISTS strings (
+    id INTEGER PRIMARY KEY,
+    blob_sha256 TEXT NOT NULL,
+    string TEXT NOT NULL,
+    category TEXT,
+    UNIQUE(blob_sha256, string)
+);
+
+CREATE TABLE IF NOT EXISTS primary_images (
+    id INTEGER PRIMARY KEY,
+    zen_generation TEXT NOT NULL,
+    type_id INTEGER NOT NULL,
+    version TEXT NOT NULL,
+    best_entry_id INTEGER REFERENCES entries(id),
+    best_image_id INTEGER REFERENCES images(id),
+    score REAL,
+    UNIQUE(zen_generation, type_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS parse_errors (
+    id INTEGER PRIMARY KEY,
+    image_id INTEGER REFERENCES images(id),
+    error_message TEXT,
+    traceback TEXT,
+    timestamp TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_entries_gen ON entries(zen_generation);
+CREATE INDEX IF NOT EXISTS idx_entries_type ON entries(type_id);
+CREATE INDEX IF NOT EXISTS idx_entries_md5 ON entries(firmware_md5);
+CREATE INDEX IF NOT EXISTS idx_entries_blob ON entries(blob_sha256);
+CREATE INDEX IF NOT EXISTS idx_entries_version ON entries(version);
+CREATE INDEX IF NOT EXISTS idx_analysis_score ON string_analysis(score DESC);
+CREATE INDEX IF NOT EXISTS idx_strings_blob ON strings(blob_sha256);
+CREATE INDEX IF NOT EXISTS idx_strings_text ON strings(string);
+CREATE INDEX IF NOT EXISTS idx_strings_category ON strings(category);
+"""
+
+
+# ---------------------------------------------------------------------------
+# Database class
+# ---------------------------------------------------------------------------
+
+
+class Database:
+    """SQLite-backed store for psp-etl pipeline data."""
+
+    def __init__(self, path: Path | str) -> None:
+        self.path = Path(path)
+        self._conn = sqlite3.connect(self.path)
+        self._conn.row_factory = sqlite3.Row
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA foreign_keys=ON")
+        self._init_schema()
+
+    def close(self) -> None:
+        self._conn.close()
+
+    def __enter__(self) -> "Database":
+        return self
+
+    def __exit__(self, *_) -> None:
+        self.close()
+
+    def _init_schema(self) -> None:
+        self._conn.executescript(_SCHEMA)
+        self._conn.commit()
+
+    # ------------------------------------------------------------------
+    # Insert methods
+    # ------------------------------------------------------------------
+
+    def insert_image(self, image: Image) -> int:
+        """Insert an image record, ignoring conflicts on sha256.
+
+        Returns the id of the inserted or existing row.
+        """
+        cur = self._conn.execute(
+            """
+            INSERT INTO images
+                (sha256, vendor, model, socket, bios_version, agesa_version,
+                 download_url, file_size, download_date, rom_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(sha256) DO NOTHING
+            """,
+            (
+                image.sha256,
+                image.vendor,
+                image.model,
+                image.socket,
+                image.bios_version,
+                image.agesa_version,
+                image.download_url,
+                image.file_size,
+                image.download_date,
+                image.rom_count,
+            ),
+        )
+        self._conn.commit()
+        if cur.lastrowid:
+            return cur.lastrowid
+        # Row already existed — fetch its id
+        row = self._conn.execute("SELECT id FROM images WHERE sha256 = ?", (image.sha256,)).fetchone()
+        return row["id"]
+
+    def insert_entry(self, entry: Entry) -> int:
+        """Insert an entry record, ignoring conflicts on the unique key.
+
+        Returns the id of the inserted or existing row.
+        """
+        cur = self._conn.execute(
+            """
+            INSERT INTO entries
+                (image_id, rom_index, directory_index, directory_magic,
+                 zen_generation, type_id, type_name, subprogram, instance,
+                 version, firmware_md5, blob_sha256, body_size,
+                 encrypted, compressed, signed, load_address)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(image_id, rom_index, directory_index, type_id, subprogram, instance)
+            DO NOTHING
+            """,
+            (
+                entry.image_id,
+                entry.rom_index,
+                entry.directory_index,
+                entry.directory_magic,
+                entry.zen_generation,
+                entry.type_id,
+                entry.type_name,
+                entry.subprogram,
+                entry.instance,
+                entry.version,
+                entry.firmware_md5,
+                entry.blob_sha256,
+                entry.body_size,
+                entry.encrypted,
+                entry.compressed,
+                entry.signed,
+                entry.load_address,
+            ),
+        )
+        self._conn.commit()
+        if cur.lastrowid:
+            return cur.lastrowid
+        row = self._conn.execute(
+            """
+            SELECT id FROM entries
+            WHERE image_id = ? AND rom_index = ? AND directory_index IS ?
+              AND type_id = ? AND subprogram = ? AND instance = ?
+            """,
+            (
+                entry.image_id,
+                entry.rom_index,
+                entry.directory_index,
+                entry.type_id,
+                entry.subprogram,
+                entry.instance,
+            ),
+        ).fetchone()
+        return row["id"]
+
+    def insert_string_analysis(self, analysis: StringAnalysis) -> int:
+        """Insert or replace a string_analysis record.
+
+        Returns the row id.
+        """
+        cur = self._conn.execute(
+            """
+            INSERT INTO string_analysis
+                (entry_id, total_strings, unique_strings, format_strings,
+                 function_names, error_messages, postcode_strings,
+                 descriptive_strings, score)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(entry_id) DO UPDATE SET
+                total_strings      = excluded.total_strings,
+                unique_strings     = excluded.unique_strings,
+                format_strings     = excluded.format_strings,
+                function_names     = excluded.function_names,
+                error_messages     = excluded.error_messages,
+                postcode_strings   = excluded.postcode_strings,
+                descriptive_strings= excluded.descriptive_strings,
+                score              = excluded.score
+            """,
+            (
+                analysis.entry_id,
+                analysis.total_strings,
+                analysis.unique_strings,
+                analysis.format_strings,
+                analysis.function_names,
+                analysis.error_messages,
+                analysis.postcode_strings,
+                analysis.descriptive_strings,
+                analysis.score,
+            ),
+        )
+        self._conn.commit()
+        return (
+            cur.lastrowid
+            or self._conn.execute("SELECT id FROM string_analysis WHERE entry_id = ?", (analysis.entry_id,)).fetchone()[
+                "id"
+            ]
+        )
+
+    def insert_strings(self, blob_sha256: str, strings: list[tuple[str, str]]) -> None:
+        """Insert (string, category) pairs for a blob, ignoring duplicates.
+
+        ``strings`` is a list of (text, category) tuples.
+        """
+        self._conn.executemany(
+            """
+            INSERT INTO strings (blob_sha256, string, category)
+            VALUES (?, ?, ?)
+            ON CONFLICT(blob_sha256, string) DO NOTHING
+            """,
+            [(blob_sha256, text, category) for text, category in strings],
+        )
+        self._conn.commit()
+
+    def insert_parse_error(self, error: ParseError) -> int:
+        """Insert a parse_error record. Returns the row id."""
+        cur = self._conn.execute(
+            """
+            INSERT INTO parse_errors (image_id, error_message, traceback)
+            VALUES (?, ?, ?)
+            """,
+            (error.image_id, error.error_message, error.traceback),
+        )
+        self._conn.commit()
+        return cur.lastrowid
+
+    def upsert_primary_image(self, primary: PrimaryImage) -> int:
+        """Insert or update a primary_images record. Returns the row id."""
+        cur = self._conn.execute(
+            """
+            INSERT INTO primary_images
+                (zen_generation, type_id, version, best_entry_id, best_image_id, score)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(zen_generation, type_id, version) DO UPDATE SET
+                best_entry_id = excluded.best_entry_id,
+                best_image_id = excluded.best_image_id,
+                score         = excluded.score
+            """,
+            (
+                primary.zen_generation,
+                primary.type_id,
+                primary.version,
+                primary.best_entry_id,
+                primary.best_image_id,
+                primary.score,
+            ),
+        )
+        self._conn.commit()
+        return (
+            cur.lastrowid
+            or self._conn.execute(
+                """
+            SELECT id FROM primary_images
+            WHERE zen_generation = ? AND type_id = ? AND version = ?
+            """,
+                (primary.zen_generation, primary.type_id, primary.version),
+            ).fetchone()["id"]
+        )
+
+    # ------------------------------------------------------------------
+    # Query methods
+    # ------------------------------------------------------------------
+
+    def get_image_by_sha256(self, sha256: str) -> sqlite3.Row | None:
+        return self._conn.execute("SELECT * FROM images WHERE sha256 = ?", (sha256,)).fetchone()
+
+    def get_entry_by_id(self, entry_id: int) -> sqlite3.Row | None:
+        return self._conn.execute("SELECT * FROM entries WHERE id = ?", (entry_id,)).fetchone()
+
+    def query_entries(
+        self,
+        *,
+        zen_generation: str | None = None,
+        type_id: int | None = None,
+        vendor: str | None = None,
+        min_score: float | None = None,
+        has_strings: bool = False,
+    ) -> list[sqlite3.Row]:
+        """Return entries matching the given filters.
+
+        Joins with images (for vendor filter) and string_analysis (for score
+        filters).  Entries without a string_analysis row are included unless
+        ``has_strings`` or ``min_score`` is set.
+        """
+        conditions: list[str] = []
+        params: list[object] = []
+
+        if zen_generation is not None:
+            conditions.append("e.zen_generation = ?")
+            params.append(zen_generation)
+
+        if type_id is not None:
+            conditions.append("e.type_id = ?")
+            params.append(type_id)
+
+        if vendor is not None:
+            conditions.append("i.vendor = ?")
+            params.append(vendor)
+
+        if has_strings or min_score is not None:
+            conditions.append("sa.score > 0")
+
+        if min_score is not None:
+            conditions.append("sa.score >= ?")
+            params.append(min_score)
+
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+        join_type = "INNER" if (has_strings or min_score is not None) else "LEFT"
+
+        sql = f"""
+            SELECT e.*, i.vendor, i.model, i.socket, sa.score
+            FROM entries e
+            JOIN images i ON i.id = e.image_id
+            {join_type} JOIN string_analysis sa ON sa.entry_id = e.id
+            {where}
+            ORDER BY sa.score DESC NULLS LAST, e.id
+        """
+        return self._conn.execute(sql, params).fetchall()
+
+    def get_best_entries(
+        self,
+        zen_generation: str | None = None,
+        type_id: int | None = None,
+    ) -> list[sqlite3.Row]:
+        """Return primary_images rows joined with entry and image details."""
+        conditions: list[str] = []
+        params: list[object] = []
+
+        if zen_generation is not None:
+            conditions.append("pi.zen_generation = ?")
+            params.append(zen_generation)
+
+        if type_id is not None:
+            conditions.append("pi.type_id = ?")
+            params.append(type_id)
+
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+
+        sql = f"""
+            SELECT pi.*, e.blob_sha256, e.type_name, e.version,
+                   i.vendor, i.model, i.socket
+            FROM primary_images pi
+            LEFT JOIN entries e ON e.id = pi.best_entry_id
+            LEFT JOIN images i ON i.id = pi.best_image_id
+            {where}
+            ORDER BY pi.zen_generation, pi.type_id, pi.score DESC NULLS LAST
+        """
+        return self._conn.execute(sql, params).fetchall()
+
+    def get_unanalyzed_entries(self) -> list[sqlite3.Row]:
+        """Return entries that have a blob but no string_analysis row yet."""
+        return self._conn.execute(
+            """
+            SELECT e.*
+            FROM entries e
+            LEFT JOIN string_analysis sa ON sa.entry_id = e.id
+            WHERE e.blob_sha256 IS NOT NULL
+              AND sa.id IS NULL
+            """
+        ).fetchall()
+
+    def get_strings_for_blob(self, blob_sha256: str) -> list[sqlite3.Row]:
+        return self._conn.execute(
+            "SELECT * FROM strings WHERE blob_sha256 = ? ORDER BY category, string",
+            (blob_sha256,),
+        ).fetchall()
+
+    def get_parse_errors(self, image_id: int | None = None) -> list[sqlite3.Row]:
+        if image_id is not None:
+            return self._conn.execute(
+                "SELECT * FROM parse_errors WHERE image_id = ? ORDER BY id",
+                (image_id,),
+            ).fetchall()
+        return self._conn.execute("SELECT * FROM parse_errors ORDER BY id").fetchall()
+
+    def stats(self) -> dict:
+        """Return a summary dict for the `psp-etl stats` command."""
+        result: dict = {}
+
+        result["images"] = self._conn.execute("SELECT COUNT(*) FROM images").fetchone()[0]
+        result["entries"] = self._conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+        result["analyzed"] = self._conn.execute("SELECT COUNT(*) FROM string_analysis").fetchone()[0]
+        result["parse_errors"] = self._conn.execute("SELECT COUNT(*) FROM parse_errors").fetchone()[0]
+
+        result["by_vendor"] = {
+            row["vendor"]: row["cnt"]
+            for row in self._conn.execute(
+                "SELECT vendor, COUNT(*) AS cnt FROM images GROUP BY vendor ORDER BY cnt DESC"
+            ).fetchall()
+        }
+        result["by_generation"] = {
+            row["zen_generation"]: row["cnt"]
+            for row in self._conn.execute(
+                """
+                SELECT zen_generation, COUNT(*) AS cnt
+                FROM entries
+                GROUP BY zen_generation
+                ORDER BY zen_generation
+                """
+            ).fetchall()
+        }
+        result["encrypted_count"] = self._conn.execute(
+            "SELECT COUNT(*) FROM entries WHERE encrypted = TRUE"
+        ).fetchone()[0]
+
+        return result

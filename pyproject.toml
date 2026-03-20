@@ -20,3 +20,9 @@ psp-etl = "psp_etl.cli:cli"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.0", "ruff>=0.4"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

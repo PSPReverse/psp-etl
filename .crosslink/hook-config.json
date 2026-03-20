@@ -1,4 +1,7 @@
 {
+  "sandbox": {
+    "command": "crosslink-sandbox --project-dir {{worktree}} --"
+  },
   "agent_overrides": {
     "blocked_git_commands": [
       "git push --force",
