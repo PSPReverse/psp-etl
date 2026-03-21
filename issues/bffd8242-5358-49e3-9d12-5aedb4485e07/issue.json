@@ -3,11 +3,12 @@
   "display_id": 15,
   "title": "Implement stats dashboard and string search",
   "description": "Enhance stats and query commands:\n- psp-etl stats: images per vendor, entries per generation, encryption rates, score distributions\n- psp-etl query --string 'spiRead': search strings table\n- Cross-vendor diff view: same firmware version, different md5, compare string sets\n- Rich formatted output with tables and charts\n- Depends on: db.py, primary image selection",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-03-08T17:07:27.073331412Z",
-  "updated_at": "2026-03-08T17:07:27.073331412Z",
+  "updated_at": "2026-03-21T18:17:13.431332661Z",
+  "closed_at": "2026-03-21T18:17:13.431332661Z",
   "labels": [
     "analysis",
     "cli"
