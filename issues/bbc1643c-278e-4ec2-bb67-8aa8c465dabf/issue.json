@@ -1,0 +1,31 @@
+{
+  "uuid": "bbc1643c-278e-4ec2-bb67-8aa8c465dabf",
+  "display_id": 5,
+  "title": "Implement CLI commands for Milestone 1",
+  "description": "Wire up click commands in src/psp_etl/cli.py:\n- psp-etl ingest <rom_path|directory> [--vendor NAME] [--model NAME]: parse ROMs, extract PSP entries\n- psp-etl analyze [--reanalyze]: run string analysis on unanalyzed blobs\n- psp-etl query [--gen] [--type] [--vendor] [--min-score] [--has-strings] [--format table|json|csv]: query DB\n- psp-etl best [--gen] [--type] [--export-dir]: show/export best images\n- psp-etl stats [--gen]: summary dashboard\n- psp-etl select: recompute primary image selections\n- Use rich for table output and progress bars\n- Use click groups, not typer\n- Depends on: db.py, ingest.py, strings.py",
+  "status": "closed",
+  "priority": "high",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:26.981798155Z",
+  "updated_at": "2026-03-21T16:20:59.407752991Z",
+  "closed_at": "2026-03-21T16:20:59.407752991Z",
+  "labels": [
+    "cli",
+    "core"
+  ],
+  "comments": [
+    {
+      "id": 4,
+      "author": "driver",
+      "content": "Design decisions: (1) --data-dir is a click context param on the top-level group, default ./data. (2) Scrapers are sync (httpx.Client), no async. (3) All blob references in output must show human-readable labels (type_name+version), never raw hashes.",
+      "created_at": "2026-03-08T18:20:06.581425415Z",
+      "kind": "note"
+    }
+  ],
+  "blockers": [
+    "f97be8ee-e027-47e1-88aa-26e606ca098f",
+    "28734de4-8af1-4203-bdf7-7c60f80925ba",
+    "221f3152-e2cd-421d-acb0-a6705bf39fe0"
+  ],
+  "milestone_uuid": "208ff0c8-50a7-47c7-9ab2-13c6816c8c1b"
+}
