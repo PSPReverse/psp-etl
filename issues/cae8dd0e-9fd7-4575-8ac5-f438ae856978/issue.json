@@ -1,0 +1,10 @@
+{
+  "uuid": "cae8dd0e-9fd7-4575-8ac5-f438ae856978",
+  "display_id": null,
+  "title": "Shannon entropy fallback for zero-string unencrypted blobs",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-21T16:17:06.695732947Z",
+  "updated_at": "2026-03-21T16:17:06.695732947Z"
+}
