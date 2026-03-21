@@ -3,11 +3,12 @@
   "display_id": null,
   "title": "Implement the psp-etl ingest CLI command (issue L5). The CLI uses Click with a top-level --data-dir group option. Add an 'ingest' subcommand to src/psp_etl/cli.py that: accepts a ROM file or directory path; scans directories for *.rom/*.bin/*.cap; creates data_dir/roms/ and data_dir/blobs/ if needed; calls ingest_rom() from src/psp_etl/ingest.py; shows rich progress; exits 0 even on parse errors. See DESIGN.md CLI Interface for full spec.",
   "description": "Created by crosslink kickoff",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-03-21T17:49:59.525533151Z",
-  "updated_at": "2026-03-21T17:49:59.589155908Z",
+  "updated_at": "2026-03-21T22:47:17.772261627Z",
+  "closed_at": "2026-03-21T22:47:17.772261627Z",
   "labels": [
     "feature"
   ]
