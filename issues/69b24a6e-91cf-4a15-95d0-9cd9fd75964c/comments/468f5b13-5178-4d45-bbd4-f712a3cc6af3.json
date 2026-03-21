@@ -1,0 +1,10 @@
+{
+  "uuid": "468f5b13-5178-4d45-bbd4-f712a3cc6af3",
+  "issue_uuid": "69b24a6e-91cf-4a15-95d0-9cd9fd75964c",
+  "author": "driver",
+  "content": "Scope update: include --string <pattern> flag for searching blob string contents. This was previously in #15.",
+  "created_at": "2026-03-21T16:21:42.768945716Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAi/mnFJPr44+Ai1TG4dmiCnyC7992VK/ivm0/o8+1TQDHTrWmHKZND1maGo5dQZwL5Kf6V3BN6G98BbVza2HiAw=="
+}
