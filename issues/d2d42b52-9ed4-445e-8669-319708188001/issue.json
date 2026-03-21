@@ -1,0 +1,11 @@
+{
+  "uuid": "d2d42b52-9ed4-445e-8669-319708188001",
+  "display_id": null,
+  "title": "Write smoke tests for the psp-etl analyze CLI command (issue L23). Augment tests/test_cli_analyze.py. Read the existing file first. Add: (1) a pipeline smoke test: create a blob with real printable ASCII content (e.g. b'spiRead() ERROR: bad value format_string=%s descriptive string here' * 10), run analyze, verify score > 0 and strings table populated. (2) verify 'Analyzed N unique blob(s).' appears in output. (3) verify --reanalyze flag actually overwrites stale scores (set score=999, reanalyze, confirm score \\!= 999). Run uv run --extra dev pytest tests/ -q to confirm all tests pass. Commit and close issue L23.",
+  "description": "Created by crosslink kickoff",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-21T23:55:46.441856465Z",
+  "updated_at": "2026-03-21T23:55:46.441856465Z"
+}
