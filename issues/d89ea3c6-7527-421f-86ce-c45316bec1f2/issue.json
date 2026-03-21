@@ -1,0 +1,11 @@
+{
+  "uuid": "d89ea3c6-7527-421f-86ce-c45316bec1f2",
+  "display_id": null,
+  "title": "Fix issue L8: psp-etl scrape command crashes because scrapers must be used as async context managers.\n\n## Bug\n`psp-etl scrape all --dry-run` crashes with:\n  RuntimeError: Use 'async with AsRockScraper() as s:' to manage the client lifecycle\n\n## Root cause\nIn src/psp_etl/cli.py, _scrape_async instantiates scrapers with:\n  scraper = _VENDOR_SCRAPERS[vendor_name]()\nAll scrapers define __aenter__/__aexit__ to create their httpx.AsyncClient. Without the context manager, _client is None and _require_client() raises.\n\n## TDD approach (do this first)\n1. Write tests/test_cli_scrape.py with a test that mocks a scraper using async context manager protocol:\n   - The mock scraper's __aenter__ returns the mock itself, __aexit__ is a no-op\n   - list_boards returns a single BoardInfo\n   - list_bios_updates returns a single BiosUpdate with a fake URL\n   - Test that: runner.invoke(cli, ['--data-dir', str(tmp_path), 'scrape', 'asrock', '--dry-run']) exits 0 and 'DRY-RUN' in result.output\n   - Run the test and confirm it FAILS first (before the fix)\n\n2. Fix src/psp_etl/cli.py: in _scrape_async, wrap each scraper in its async context manager:\n   Replace: scraper = _VENDOR_SCRAPERS[vendor_name]()\n   With: async with _VENDOR_SCRAPERS[vendor_name]() as scraper:\n   (and indent the board-processing code accordingly)\n\n3. Run uv run --extra dev pytest tests/ -q — all tests must pass.\n\n## Additional: update VendorScraper base class\nAdd __aenter__/__aexit__ stubs to src/psp_etl/scrape/base.py so the async context manager contract is part of the ABC:\n  async def __aenter__(self): return self\n  async def __aexit__(self, *args): pass\n(concrete scrapers override these to manage their httpx client)\n\nCommit and close issue L8.",
+  "description": "Created by crosslink kickoff",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-21T22:58:00.944416244Z",
+  "updated_at": "2026-03-21T22:58:00.944416244Z"
+}
