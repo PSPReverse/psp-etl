@@ -1,0 +1,10 @@
+{
+  "uuid": "166f12cd-0a10-4939-ba08-ce02f9273c3d",
+  "issue_uuid": "ee4cf238-4ccf-4f58-a9bf-5901b44a5f8a",
+  "author": "driver",
+  "content": "Investigate only when we actually hit rate limit responses (HTTP 429 / connection drops) from vendor CDNs. No proactive throttling needed until then.",
+  "created_at": "2026-03-21T16:22:18.594582986Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAfxp0YFyVd3MYD/+Z6HyLzwJoTS+cu1Ey85jC6amkHwMR9FNfhjr5YppoGvz9LHz+0E5YDi4jNpRWCJ/wHo3TDw=="
+}
