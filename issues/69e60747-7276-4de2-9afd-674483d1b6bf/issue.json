@@ -2,11 +2,12 @@
   "uuid": "69e60747-7276-4de2-9afd-674483d1b6bf",
   "display_id": null,
   "title": "crosslink onboarding UX: 5 friction points from issue #365",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-03-20T23:26:17.955304755Z",
-  "updated_at": "2026-03-20T23:26:19.449661392Z",
+  "updated_at": "2026-03-21T16:21:33.560856393Z",
+  "closed_at": "2026-03-21T16:21:33.560856393Z",
   "labels": [
     "ux"
   ]
