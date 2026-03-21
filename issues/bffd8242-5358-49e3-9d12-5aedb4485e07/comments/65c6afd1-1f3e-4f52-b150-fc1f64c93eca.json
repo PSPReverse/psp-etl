@@ -1,0 +1,10 @@
+{
+  "uuid": "65c6afd1-1f3e-4f52-b150-fc1f64c93eca",
+  "issue_uuid": "bffd8242-5358-49e3-9d12-5aedb4485e07",
+  "author": "driver",
+  "content": "Scope update: string search (--string flag) moved to the query command. This issue covers only: stats dashboard (per-generation summary: images per vendor, entries per generation, encryption rates, score distributions).",
+  "created_at": "2026-03-21T16:21:42.705580493Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA0Ti57jwFsxbCMHbOGOS82J1Gt6IAIR5YywPmdhEcBANTzTfU2SHax7MEd1LZuIbi9EAbz6JOSTkoPR6HZdzABg=="
+}
