@@ -2,9 +2,10 @@
   "uuid": "b7578466-3b01-4f49-bc10-2c64652182af",
   "display_id": null,
   "title": "Implement psp-etl query CLI command (--gen, --type, --vendor, --min-score, --has-strings, --string, --format)",
-  "status": "open",
+  "status": "closed",
   "priority": "high",
   "created_by": "driver",
   "created_at": "2026-03-21T16:20:41.699632010Z",
-  "updated_at": "2026-03-21T16:20:41.699632010Z"
+  "updated_at": "2026-03-21T18:17:08.397707976Z",
+  "closed_at": "2026-03-21T18:17:08.397707976Z"
 }
