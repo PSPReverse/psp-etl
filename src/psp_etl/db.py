@@ -86,6 +86,38 @@ class PrimaryImage:
 # Schema
 # ---------------------------------------------------------------------------
 
+# Migration: replaces the inline UNIQUE constraint on entries with an
+# expression-based index that uses COALESCE so that NULL zen_generation values
+# are treated as equal (SQLite normally considers NULL != NULL in UNIQUE
+# constraints, which would allow duplicate "unknown-generation" entries).
+_MIGRATE_ENTRIES_UNIQUE = """
+BEGIN;
+CREATE TABLE entries_new (
+    id INTEGER PRIMARY KEY,
+    image_id INTEGER REFERENCES images(id),
+    rom_index INTEGER DEFAULT 0,
+    directory_index INTEGER,
+    directory_magic TEXT,
+    zen_generation TEXT,
+    type_id INTEGER NOT NULL,
+    type_name TEXT,
+    subprogram INTEGER DEFAULT 0,
+    instance INTEGER DEFAULT 0,
+    version TEXT,
+    firmware_md5 TEXT,
+    blob_sha256 TEXT,
+    body_size INTEGER,
+    encrypted BOOLEAN DEFAULT FALSE,
+    compressed BOOLEAN DEFAULT FALSE,
+    signed BOOLEAN DEFAULT FALSE,
+    load_address INTEGER
+);
+INSERT OR IGNORE INTO entries_new SELECT * FROM entries;
+DROP TABLE entries;
+ALTER TABLE entries_new RENAME TO entries;
+COMMIT;
+"""
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY,
@@ -119,8 +151,7 @@ CREATE TABLE IF NOT EXISTS entries (
     encrypted BOOLEAN DEFAULT FALSE,
     compressed BOOLEAN DEFAULT FALSE,
     signed BOOLEAN DEFAULT FALSE,
-    load_address INTEGER,
-    UNIQUE(image_id, rom_index, directory_index, type_id, subprogram, instance)
+    load_address INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS string_analysis (
@@ -163,6 +194,17 @@ CREATE TABLE IF NOT EXISTS parse_errors (
     timestamp TEXT DEFAULT (datetime('now'))
 );
 
+-- Expression-based unique index for entries.  COALESCE normalises NULL values
+-- so that two rows with zen_generation=NULL (or directory_index=NULL) are
+-- treated as equal and trigger the ON CONFLICT / OR IGNORE path.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_entries_unique
+ON entries(
+    image_id, rom_index,
+    COALESCE(directory_index, -1),
+    type_id, subprogram, instance,
+    COALESCE(zen_generation, '')
+);
+
 CREATE INDEX IF NOT EXISTS idx_entries_gen ON entries(zen_generation);
 CREATE INDEX IF NOT EXISTS idx_entries_type ON entries(type_id);
 CREATE INDEX IF NOT EXISTS idx_entries_md5 ON entries(firmware_md5);
@@ -201,8 +243,31 @@ class Database:
         self.close()
 
     def _init_schema(self) -> None:
+        self._maybe_migrate_entries_constraint()
         self._conn.executescript(_SCHEMA)
         self._conn.commit()
+
+    def _maybe_migrate_entries_constraint(self) -> None:
+        """Migrate entries to drop the inline UNIQUE and switch to idx_entries_unique.
+
+        Old databases had ``UNIQUE(image_id, rom_index, directory_index,
+        type_id, subprogram, instance)`` inline in the CREATE TABLE.  This
+        causes duplicate rows when zen_generation is NULL because SQLite treats
+        each NULL as distinct.  The replacement is an expression-based unique
+        index using COALESCE to normalise NULLs.
+        """
+        # If the expression-based index already exists, we're done.
+        idx = self._conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_entries_unique'"
+        ).fetchone()
+        if idx is not None:
+            return
+        # If entries table doesn't exist yet, _init_schema will create it fresh.
+        table = self._conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='entries'").fetchone()
+        if table is None:
+            return
+        # Old table exists without the expression index — recreate it.
+        self._conn.executescript(_MIGRATE_ENTRIES_UNIQUE)
 
     # ------------------------------------------------------------------
     # Insert methods
@@ -248,14 +313,12 @@ class Database:
         """
         cur = self._conn.execute(
             """
-            INSERT INTO entries
+            INSERT OR IGNORE INTO entries
                 (image_id, rom_index, directory_index, directory_magic,
                  zen_generation, type_id, type_name, subprogram, instance,
                  version, firmware_md5, blob_sha256, body_size,
                  encrypted, compressed, signed, load_address)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(image_id, rom_index, directory_index, type_id, subprogram, instance)
-            DO NOTHING
             """,
             (
                 entry.image_id,
@@ -285,6 +348,7 @@ class Database:
             SELECT id FROM entries
             WHERE image_id = ? AND rom_index = ? AND directory_index IS ?
               AND type_id = ? AND subprogram = ? AND instance = ?
+              AND zen_generation IS ?
             """,
             (
                 entry.image_id,
@@ -293,6 +357,7 @@ class Database:
                 entry.type_id,
                 entry.subprogram,
                 entry.instance,
+                entry.zen_generation,
             ),
         ).fetchone()
         return row["id"]
@@ -417,12 +482,16 @@ class Database:
         vendor: str | None = None,
         min_score: float | None = None,
         has_strings: bool = False,
+        string_pattern: str | None = None,
     ) -> list[sqlite3.Row]:
         """Return entries matching the given filters.
 
         Joins with images (for vendor filter) and string_analysis (for score
         filters).  Entries without a string_analysis row are included unless
         ``has_strings`` or ``min_score`` is set.
+
+        When *string_pattern* is given, only entries whose blobs contain a
+        matching string (SQL LIKE substring match) are returned.
         """
         conditions: list[str] = []
         params: list[object] = []
@@ -445,6 +514,12 @@ class Database:
         if min_score is not None:
             conditions.append("sa.score >= ?")
             params.append(min_score)
+
+        if string_pattern is not None:
+            conditions.append(
+                "EXISTS (SELECT 1 FROM strings s WHERE s.blob_sha256 = e.blob_sha256 AND s.string LIKE ?)"
+            )
+            params.append(f"%{string_pattern}%")
 
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
         join_type = "INNER" if (has_strings or min_score is not None) else "LEFT"
@@ -501,6 +576,101 @@ class Database:
             """
         ).fetchall()
 
+    def get_selection_candidates(self) -> list[sqlite3.Row]:
+        """Return entries suitable for primary image selection.
+
+        Returns all entries with zen_generation and version set, joined with
+        images (vendor) and string_analysis (score). Ordered for groupby:
+        (zen_generation, type_id, version, score DESC).
+        """
+        return self._conn.execute(
+            """
+            SELECT e.id AS entry_id, e.image_id, e.zen_generation, e.type_id,
+                   e.version, e.firmware_md5, e.type_name, e.blob_sha256,
+                   i.vendor, i.model,
+                   COALESCE(sa.score, 0.0) AS score
+            FROM entries e
+            JOIN images i ON i.id = e.image_id
+            LEFT JOIN string_analysis sa ON sa.entry_id = e.id
+            WHERE e.zen_generation IS NOT NULL
+              AND e.version IS NOT NULL
+            ORDER BY e.zen_generation, e.type_id, e.version,
+                     sa.score DESC NULLS LAST, e.id
+            """
+        ).fetchall()
+
+    def stats_images_by_vendor(self, gen: str | None = None) -> list[sqlite3.Row]:
+        """Return image counts per vendor, optionally filtered by entries' generation."""
+        if gen is not None:
+            return self._conn.execute(
+                """
+                SELECT i.vendor, COUNT(DISTINCT i.id) AS cnt
+                FROM images i
+                JOIN entries e ON e.image_id = i.id
+                WHERE e.zen_generation = ?
+                GROUP BY i.vendor
+                ORDER BY cnt DESC
+                """,
+                (gen,),
+            ).fetchall()
+        return self._conn.execute(
+            "SELECT vendor, COUNT(*) AS cnt FROM images GROUP BY vendor ORDER BY cnt DESC"
+        ).fetchall()
+
+    def stats_entries_by_generation(self, gen: str | None = None) -> list[sqlite3.Row]:
+        """Return per-generation entry and encryption counts."""
+        where = "WHERE zen_generation = ?" if gen is not None else ""
+        params = (gen,) if gen is not None else ()
+        return self._conn.execute(
+            f"""
+            SELECT zen_generation,
+                   COUNT(*) AS total,
+                   SUM(CASE WHEN encrypted THEN 1 ELSE 0 END) AS encrypted_count
+            FROM entries
+            {where}
+            GROUP BY zen_generation
+            ORDER BY zen_generation
+            """,
+            params,
+        ).fetchall()
+
+    def stats_scores_by_generation(self, gen: str | None = None) -> dict[str, list[float]]:
+        """Return all scores grouped by generation for distribution analysis."""
+        where = "WHERE e.zen_generation = ?" if gen is not None else ""
+        params = (gen,) if gen is not None else ()
+        rows = self._conn.execute(
+            f"""
+            SELECT e.zen_generation, sa.score
+            FROM entries e
+            JOIN string_analysis sa ON sa.entry_id = e.id
+            {where}
+            ORDER BY e.zen_generation, sa.score
+            """,
+            params,
+        ).fetchall()
+        result: dict[str, list[float]] = {}
+        for row in rows:
+            key = row["zen_generation"] or "unknown"
+            result.setdefault(key, []).append(row["score"])
+        return result
+
+    def stats_score_nonzero(self, gen: str | None = None) -> tuple[int, int]:
+        """Return (with_strings, without_strings) counts across all entries."""
+        where = "WHERE e.zen_generation = ?" if gen is not None else ""
+        params = (gen,) if gen is not None else ()
+        row = self._conn.execute(
+            f"""
+            SELECT
+                COUNT(CASE WHEN sa.score > 0 THEN 1 END) AS with_strings,
+                SUM(CASE WHEN sa.score IS NULL OR sa.score = 0 THEN 1 ELSE 0 END) AS without_strings
+            FROM entries e
+            LEFT JOIN string_analysis sa ON sa.entry_id = e.id
+            {where}
+            """,
+            params,
+        ).fetchone()
+        return (row["with_strings"] or 0, row["without_strings"] or 0)
+
     def get_strings_for_blob(self, blob_sha256: str) -> list[sqlite3.Row]:
         return self._conn.execute(
             "SELECT * FROM strings WHERE blob_sha256 = ? ORDER BY category, string",
@@ -514,6 +684,44 @@ class Database:
                 (image_id,),
             ).fetchall()
         return self._conn.execute("SELECT * FROM parse_errors ORDER BY id").fetchall()
+
+    def backfill_zen_generation(self, image_id: int) -> int:
+        """Assign zen_generation to NULL entries by inferring from ROM context.
+
+        For each entry with ``zen_generation IS NULL``, looks at all other
+        entries with the same ``(image_id, rom_index)`` that already have a
+        generation set, picks the most common one, and applies it.  This
+        recovers generation information for BIOS-side directories (``$BHD``,
+        ``$BL2``) that PSPTool does not annotate with PSP IDs.
+
+        Returns the number of rows updated.
+        """
+        cur = self._conn.execute(
+            """
+            UPDATE entries
+            SET zen_generation = (
+                SELECT zen_generation
+                FROM entries e2
+                WHERE e2.image_id  = entries.image_id
+                  AND e2.rom_index = entries.rom_index
+                  AND e2.zen_generation IS NOT NULL
+                GROUP BY zen_generation
+                ORDER BY COUNT(*) DESC
+                LIMIT 1
+            )
+            WHERE image_id = ?
+              AND zen_generation IS NULL
+              AND EXISTS (
+                    SELECT 1 FROM entries e3
+                    WHERE e3.image_id  = entries.image_id
+                      AND e3.rom_index = entries.rom_index
+                      AND e3.zen_generation IS NOT NULL
+              )
+            """,
+            (image_id,),
+        )
+        self._conn.commit()
+        return cur.rowcount
 
     def stats(self) -> dict:
         """Return a summary dict for the `psp-etl stats` command."""

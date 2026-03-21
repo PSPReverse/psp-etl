@@ -25,6 +25,12 @@ class BiosUpdate:
 class VendorScraper(ABC):
     """Abstract base for vendor-specific BIOS scrapers."""
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        pass
+
     @abstractmethod
     async def list_boards(self) -> list[BoardInfo]:
         """Enumerate all AM4/AM5 motherboard models."""

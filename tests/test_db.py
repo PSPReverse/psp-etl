@@ -127,6 +127,73 @@ def test_get_entry_by_id(db):
 
 
 # ---------------------------------------------------------------------------
+# Entry – multi-generation fan-out and backfill
+# ---------------------------------------------------------------------------
+
+
+def test_insert_entry_different_gens_are_separate_rows(db):
+    """Two entries identical except for zen_generation must be distinct rows."""
+    image_id = _make_image(db)
+    base = dict(image_id=image_id, type_id=1, rom_index=0, directory_index=0, subprogram=0, instance=0, version="1.0")
+    id1 = db.insert_entry(Entry(**base, zen_generation="zen1"))
+    id2 = db.insert_entry(Entry(**base, zen_generation="zen2"))
+    assert id1 != id2
+    count = db._conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+    assert count == 2
+
+
+def test_insert_entry_null_gen_dedup(db):
+    """Two entries with zen_generation=None must deduplicate to one row."""
+    image_id = _make_image(db)
+    entry = Entry(
+        image_id=image_id, type_id=1, rom_index=0, directory_index=0, subprogram=0, instance=0, zen_generation=None
+    )
+    id1 = db.insert_entry(entry)
+    id2 = db.insert_entry(entry)
+    assert id1 == id2
+    count = db._conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+    assert count == 1
+
+
+def test_backfill_zen_generation(db):
+    """NULL-gen entries adopt the dominant gen from the same ROM segment."""
+    image_id = _make_image(db)
+    # Two zen3 entries in rom_index=0
+    db.insert_entry(Entry(image_id=image_id, type_id=1, rom_index=0, directory_index=0, zen_generation="zen3"))
+    db.insert_entry(Entry(image_id=image_id, type_id=2, rom_index=0, directory_index=0, zen_generation="zen3"))
+    # One NULL-gen entry (BHD-style) in rom_index=0
+    null_id = db.insert_entry(Entry(image_id=image_id, type_id=3, rom_index=0, directory_index=1, zen_generation=None))
+
+    updated = db.backfill_zen_generation(image_id)
+
+    assert updated == 1
+    row = db.get_entry_by_id(null_id)
+    assert row["zen_generation"] == "zen3"
+
+
+def test_backfill_no_op_when_no_known_gen(db):
+    """Backfill leaves entries unchanged when no gen is known in the segment."""
+    image_id = _make_image(db)
+    null_id = db.insert_entry(Entry(image_id=image_id, type_id=1, rom_index=0, directory_index=0, zen_generation=None))
+    updated = db.backfill_zen_generation(image_id)
+    assert updated == 0
+    row = db.get_entry_by_id(null_id)
+    assert row["zen_generation"] is None
+
+
+def test_backfill_skips_already_classified(db):
+    """Backfill does not overwrite entries that already have a generation."""
+    image_id = _make_image(db)
+    db.insert_entry(Entry(image_id=image_id, type_id=1, rom_index=0, directory_index=0, zen_generation="zen2"))
+    known_id = db.insert_entry(
+        Entry(image_id=image_id, type_id=2, rom_index=0, directory_index=0, zen_generation="zen1")
+    )
+    db.backfill_zen_generation(image_id)
+    row = db.get_entry_by_id(known_id)
+    assert row["zen_generation"] == "zen1"
+
+
+# ---------------------------------------------------------------------------
 # StringAnalysis
 # ---------------------------------------------------------------------------
 
