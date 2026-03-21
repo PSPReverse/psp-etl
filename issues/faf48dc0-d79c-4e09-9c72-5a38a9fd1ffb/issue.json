@@ -2,9 +2,10 @@
   "uuid": "faf48dc0-d79c-4e09-9c72-5a38a9fd1ffb",
   "display_id": 19,
   "title": "kickoff run: add --skip-permissions flag to pass --dangerously-skip-permissions to claude",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-03-13T20:37:31.462859501Z",
-  "updated_at": "2026-03-13T20:37:31.462859501Z"
+  "updated_at": "2026-03-21T16:20:59.783017201Z",
+  "closed_at": "2026-03-21T16:20:59.783017201Z"
 }
