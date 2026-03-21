@@ -1,0 +1,11 @@
+{
+  "uuid": "cd364648-c5c1-4fd2-82f1-ea253e7b82cf",
+  "display_id": null,
+  "title": "Implement psp-etl best CLI command (issue L13). Add to src/psp_etl/cli.py: 'best' subcommand with --gen (zen1-zen5), --type (hex type_id), --export-dir (path). Query primary_images table for highest-scoring entry per (zen_generation, type_id, version). Show human-readable labels (no raw hashes). With --export-dir, copy best blobs to that directory as {type_name}_{version}.bin. See DESIGN.md CLI Interface.",
+  "description": "Created by crosslink kickoff",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-21T17:50:08.669858173Z",
+  "updated_at": "2026-03-21T17:50:08.669858173Z"
+}
