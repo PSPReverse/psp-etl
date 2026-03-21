@@ -1,0 +1,10 @@
+{
+  "uuid": "7e16da5d-71ee-4b50-be8a-ccf68e57c85a",
+  "display_id": null,
+  "title": "Implement psp-etl ingest CLI command",
+  "status": "open",
+  "priority": "high",
+  "created_by": "driver",
+  "created_at": "2026-03-21T16:20:41.698299033Z",
+  "updated_at": "2026-03-21T16:20:41.698299033Z"
+}
