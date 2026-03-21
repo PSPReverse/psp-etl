@@ -1,0 +1,11 @@
+{
+  "uuid": "885924c2-807e-4e13-ba54-50decd26a2a8",
+  "display_id": null,
+  "title": "ASUS scraper: board names contain raw HTML tags (e.g. h2 tags)",
+  "description": "Steps to reproduce:\n1. \n\nExpected: \nActual: \n\nThe ASUS SeriesFilterResult API returns board names with HTML markup. _fetch_boards_for_socket stores them verbatim into BoardInfo.model (asus.py:129).\n\nObserved output from psp-etl scrape asus:\n  <h2>TUF GAMING X670E-PLUS WIFI</h2> ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100%\n\nThe HTML bleeds into progress bar labels, stored model values in the database, and exported filenames.\n\nFix: strip HTML tags from the board name in _fetch_boards_for_socket before constructing BoardInfo.\n\nAcceptance criteria:\n- BoardInfo.model contains plain text (no HTML tags)\n- Existing scraper unit tests still pass\n- New test: _fetch_boards_for_socket with an API response containing <h2>NAME</h2> => BoardInfo.model == 'NAME'",
+  "status": "open",
+  "priority": "high",
+  "created_by": "driver",
+  "created_at": "2026-03-21T23:53:05.102203487Z",
+  "updated_at": "2026-03-21T23:53:05.102203487Z"
+}
