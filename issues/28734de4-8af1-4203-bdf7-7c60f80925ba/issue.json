@@ -1,0 +1,28 @@
+{
+  "uuid": "28734de4-8af1-4203-bdf7-7c60f80925ba",
+  "display_id": 3,
+  "title": "Implement ingest.py: ROM parsing with PSPTool",
+  "description": "Create src/psp_etl/ingest.py implementing:\n- ingest_rom(rom_path, db, data_dir) function per DESIGN.md\n- PSPTool integration: iterate roms -> directories -> files\n- Extract body bytes (try get_decrypted_decompressed_body first, fall back to get_bytes)\n- Content-address blobs to data/blobs/{sha256}.bin\n- Populate entries table with all metadata (zen_generation, type_id, version, etc.)\n- Catch PSPTool exceptions per-ROM, log to parse_errors table\n- classify_by_agesa() helper for zen generation classification\n- Depends on: db.py",
+  "status": "closed",
+  "priority": "high",
+  "created_by": "driver",
+  "created_at": "2026-03-08T17:07:26.965064554Z",
+  "updated_at": "2026-03-21T00:15:12.963311557Z",
+  "closed_at": "2026-03-21T00:15:12.963311557Z",
+  "labels": [
+    "core"
+  ],
+  "comments": [
+    {
+      "id": 2,
+      "author": "driver",
+      "content": "Design decision: Unit tests mock PSPTool API objects (ROM, Directory, File). Integration tests use real ROMs from data/roms/ with a pytest marker to skip when absent.",
+      "created_at": "2026-03-08T18:20:06.571438670Z",
+      "kind": "note"
+    }
+  ],
+  "blockers": [
+    "f97be8ee-e027-47e1-88aa-26e606ca098f"
+  ],
+  "milestone_uuid": "208ff0c8-50a7-47c7-9ab2-13c6816c8c1b"
+}
