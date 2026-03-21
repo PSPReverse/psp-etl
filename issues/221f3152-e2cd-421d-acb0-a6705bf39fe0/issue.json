@@ -3,11 +3,12 @@
   "display_id": 4,
   "title": "Implement strings.py: string extraction, classification, scoring",
   "description": "Create src/psp_etl/strings.py implementing:\n- STRING_PATTERN: regex for printable ASCII runs >= 6 chars\n- CATEGORIES dict with regexes for format_string, function_name, error_message, postcode\n- WEIGHTS: format_string=3, function_name=2, error_message=2, postcode=1, descriptive=0.5, other=0.1\n- classify_string(s) -> category\n- analyze_blob(blob_path) -> StringAnalysis dataclass\n- Shannon entropy calculation for suspected mis-classified encrypted blobs\n- See DESIGN.md Phase 3 for exact patterns and logic",
-  "status": "open",
+  "status": "closed",
   "priority": "high",
   "created_by": "driver",
   "created_at": "2026-03-08T17:07:26.973950669Z",
-  "updated_at": "2026-03-08T17:07:26.973950669Z",
+  "updated_at": "2026-03-21T00:15:13.035321535Z",
+  "closed_at": "2026-03-21T00:15:13.035321535Z",
   "labels": [
     "core"
   ],
