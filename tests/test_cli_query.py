@@ -206,3 +206,46 @@ def test_query_table_no_sha256(runner, data_dir):
     import re
 
     assert not re.search(r"[0-9a-f]{64}", result.output)
+
+
+def test_query_combined_filters(runner, data_dir):
+    result = runner.invoke(
+        cli,
+        [
+            "--data-dir",
+            str(data_dir),
+            "query",
+            "--gen",
+            "zen2",
+            "--vendor",
+            "ASUS",
+            "--has-strings",
+            "--format",
+            "json",
+        ],
+    )
+    assert result.exit_code == 0
+    records = json.loads(result.output)
+    assert len(records) == 1
+    assert records[0]["zen_generation"] == "zen2"
+    assert records[0]["vendor"] == "ASUS"
+    assert records[0]["score"] > 0
+
+
+def test_query_csv_exact_columns(runner, data_dir):
+    result = runner.invoke(cli, ["--data-dir", str(data_dir), "query", "--format", "csv"])
+    assert result.exit_code == 0
+    reader = csv.DictReader(io.StringIO(result.output))
+    rows = list(reader)
+    assert len(rows) > 0
+    assert reader.fieldnames == ["type_name", "version", "zen_generation", "vendor", "model", "score"]
+
+
+def test_query_empty_db(runner, tmp_path):
+    d = tmp_path / "data"
+    d.mkdir()
+    with Database(d / "psp-etl.db"):
+        pass  # create empty DB
+    result = runner.invoke(cli, ["--data-dir", str(d), "query"])
+    assert result.exit_code == 0
+    assert "No entries found" in result.output

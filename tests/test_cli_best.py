@@ -1,5 +1,7 @@
 """Tests for the 'psp-etl best' CLI command."""
 
+import re
+
 import pytest
 from click.testing import CliRunner
 
@@ -180,3 +182,104 @@ def test_best_export_missing_blob_warns(runner, data_dir, tmp_path):
     assert result.exit_code == 0
     assert "Warning" in result.output
     assert len(list(export_dir.iterdir())) == 1
+
+
+# ---------------------------------------------------------------------------
+# New smoke tests
+# ---------------------------------------------------------------------------
+
+_REAL_BLOB_SHA256 = "deadbeef" * 8  # 64-char hex — realistic SHA256 stand-in
+_REAL_IMAGE_SHA256 = "cafebabe" * 8  # 64-char hex — realistic SHA256 stand-in
+
+
+@pytest.fixture
+def data_dir_real_hashes(tmp_path):
+    """Like data_dir but uses 64-char hex SHA256 values to mirror real data."""
+    d = tmp_path / "data"
+    d.mkdir()
+    blobs_dir = d / "blobs"
+    blobs_dir.mkdir()
+
+    with Database(d / "psp-etl.db") as db:
+        img_id = db.insert_image(Image(sha256=_REAL_IMAGE_SHA256, vendor="ASUS", model="PRIME X570-P", socket="AM4"))
+        e1 = db.insert_entry(
+            Entry(
+                image_id=img_id,
+                type_id=0x01,
+                zen_generation="zen2",
+                type_name="PSP Boot Loader",
+                version="1.5.0",
+                blob_sha256=_REAL_BLOB_SHA256,
+                rom_index=0,
+                directory_index=0,
+                subprogram=0,
+                instance=0,
+            )
+        )
+        db.insert_string_analysis(
+            StringAnalysis(
+                entry_id=e1,
+                total_strings=100,
+                unique_strings=80,
+                format_strings=10,
+                function_names=5,
+                error_messages=3,
+                postcode_strings=2,
+                descriptive_strings=15,
+                score=42.5,
+            )
+        )
+        db.upsert_primary_image(
+            PrimaryImage(
+                zen_generation="zen2", type_id=0x01, version="1.5.0", best_entry_id=e1, best_image_id=img_id, score=42.5
+            )
+        )
+
+    (blobs_dir / f"{_REAL_BLOB_SHA256}.bin").write_bytes(b"\xaa" * 32)
+    return d
+
+
+def test_best_no_hex_hashes_in_output(runner, data_dir_real_hashes):
+    """Table output must not expose any 64-character hex hash strings."""
+    result = runner.invoke(cli, ["--data-dir", str(data_dir_real_hashes), "best"])
+    assert result.exit_code == 0
+    assert re.search(r"[0-9a-f]{64}", result.output) is None
+
+
+def test_best_export_dir_real_blob_content(runner, data_dir_real_hashes, tmp_path):
+    """--export-dir writes {type_name}_{version}.bin with exact blob bytes."""
+    export_dir = tmp_path / "export"
+    result = runner.invoke(cli, ["--data-dir", str(data_dir_real_hashes), "best", "--export-dir", str(export_dir)])
+    assert result.exit_code == 0
+    exported = export_dir / "PSP_Boot_Loader_1.5.0.bin"
+    assert exported.exists()
+    assert exported.read_bytes() == b"\xaa" * 32
+
+
+def test_best_primary_images_not_selected(runner, tmp_path):
+    """Images/entries exist but 'select' was never run — primary_images is empty."""
+    d = tmp_path / "data"
+    d.mkdir()
+    (d / "blobs").mkdir()
+
+    with Database(d / "psp-etl.db") as db:
+        img_id = db.insert_image(Image(sha256="imgabc", vendor="ASUS", model="PRIME X570-P", socket="AM4"))
+        db.insert_entry(
+            Entry(
+                image_id=img_id,
+                type_id=0x01,
+                zen_generation="zen2",
+                type_name="PSP Boot Loader",
+                version="1.5.0",
+                blob_sha256="blobhash1",
+                rom_index=0,
+                directory_index=0,
+                subprogram=0,
+                instance=0,
+            )
+        )
+        # Deliberately omit upsert_primary_image — simulates 'select' not having been run.
+
+    result = runner.invoke(cli, ["--data-dir", str(d), "best"])
+    assert result.exit_code == 0
+    assert "No primary images found" in result.output

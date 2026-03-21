@@ -4,7 +4,7 @@ import pytest
 from click.testing import CliRunner
 
 from psp_etl.cli import cli
-from psp_etl.db import Database, Entry, Image, StringAnalysis
+from psp_etl.db import Database, Entry, Image
 
 
 @pytest.fixture
@@ -157,3 +157,61 @@ def test_analyze_missing_blob_skipped(runner, tmp_path):
 def test_analyze_no_db(runner, tmp_path):
     result = runner.invoke(cli, ["--data-dir", str(tmp_path / "noexist"), "analyze"])
     assert result.exit_code != 0
+
+
+def test_analyze_pipeline_smoke(runner, tmp_path):
+    """End-to-end smoke: rich printable ASCII blob → score > 0 and strings table populated."""
+    d = tmp_path / "data"
+    d.mkdir()
+    blobs_dir = d / "blobs"
+    blobs_dir.mkdir()
+
+    content = b"spiRead() ERROR: bad value format_string=%s descriptive string here" * 10
+    with Database(d / "psp-etl.db") as db:
+        img_id = db.insert_image(Image(sha256="smoke1", vendor="TEST"))
+        db.insert_entry(
+            Entry(
+                image_id=img_id,
+                type_id=1,
+                blob_sha256="smokeblob",
+                rom_index=0,
+                directory_index=0,
+                subprogram=0,
+                instance=0,
+            )
+        )
+    (blobs_dir / "smokeblob.bin").write_bytes(content)
+
+    result = runner.invoke(cli, ["--data-dir", str(d), "analyze"])
+    assert result.exit_code == 0, result.output
+
+    with Database(d / "psp-etl.db") as db:
+        sa = db._conn.execute("SELECT score FROM string_analysis").fetchone()
+        assert sa["score"] > 0
+        strings = db.get_strings_for_blob("smokeblob")
+        assert len(strings) > 0
+
+
+def test_analyze_reports_analyzed_count(runner, data_dir):
+    """'Analyzed N unique blob(s).' message appears in CLI output."""
+    result = runner.invoke(cli, ["--data-dir", str(data_dir), "analyze"])
+    assert result.exit_code == 0, result.output
+    assert "Analyzed 2 unique blob(s)." in result.output
+
+
+def test_analyze_reanalyze_overwrites_score(runner, data_dir):
+    """--reanalyze flag overwrites a stale score value."""
+    runner.invoke(cli, ["--data-dir", str(data_dir), "analyze"])
+
+    with Database(data_dir / "psp-etl.db") as db:
+        db._conn.execute("UPDATE string_analysis SET score = 999")
+        db._conn.commit()
+
+    result = runner.invoke(cli, ["--data-dir", str(data_dir), "analyze", "--reanalyze"])
+    assert result.exit_code == 0
+
+    with Database(data_dir / "psp-etl.db") as db:
+        row = db._conn.execute(
+            "SELECT score FROM string_analysis sa JOIN entries e ON e.id = sa.entry_id WHERE e.type_id = 1"
+        ).fetchone()
+        assert row["score"] != 999

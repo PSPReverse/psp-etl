@@ -236,3 +236,120 @@ def test_select_same_md5_no_cross_vendor(runner, data_dir, caplog):
 def test_select_no_db(runner, tmp_path):
     result = runner.invoke(cli, ["--data-dir", str(tmp_path / "noexist"), "select"])
     assert result.exit_code != 0
+
+
+def test_select_best_entry_id_is_higher_scoring_vendor(runner, data_dir):
+    """Integration test: the best_entry_id in primary_images must point to the
+    higher-scoring entry across two vendors."""
+    with Database(data_dir / "psp-etl.db") as db:
+        img_asus = db.insert_image(Image(sha256="asus_hi", vendor="ASUS"))
+        img_msi = db.insert_image(Image(sha256="msi_lo", vendor="MSI"))
+
+        # Both entries belong to the same group (zen_generation, type_id, version)
+        e_high = db.insert_entry(
+            Entry(
+                image_id=img_asus,
+                type_id=10,
+                zen_generation="zen4",
+                version="5.0.0",
+                firmware_md5="md5_hi",
+                rom_index=0,
+                directory_index=0,
+                subprogram=0,
+                instance=0,
+            )
+        )
+        e_low = db.insert_entry(
+            Entry(
+                image_id=img_msi,
+                type_id=10,
+                zen_generation="zen4",
+                version="5.0.0",
+                firmware_md5="md5_lo",
+                rom_index=0,
+                directory_index=0,
+                subprogram=0,
+                instance=1,
+            )
+        )
+        db.insert_string_analysis(
+            StringAnalysis(
+                entry_id=e_high,
+                total_strings=200,
+                unique_strings=150,
+                format_strings=20,
+                function_names=10,
+                error_messages=5,
+                postcode_strings=3,
+                descriptive_strings=30,
+                score=75.0,
+            )
+        )
+        db.insert_string_analysis(
+            StringAnalysis(
+                entry_id=e_low,
+                total_strings=10,
+                unique_strings=8,
+                format_strings=1,
+                function_names=0,
+                error_messages=0,
+                postcode_strings=0,
+                descriptive_strings=1,
+                score=3.0,
+            )
+        )
+
+    result = runner.invoke(cli, ["--data-dir", str(data_dir), "select"])
+    assert result.exit_code == 0
+
+    with Database(data_dir / "psp-etl.db") as db:
+        row = db._conn.execute(
+            "SELECT best_entry_id, score FROM primary_images"
+            " WHERE zen_generation='zen4' AND type_id=10 AND version='5.0.0'"
+        ).fetchone()
+
+    assert row is not None
+    assert row["best_entry_id"] == e_high
+    assert row["score"] == 75.0
+
+
+def test_select_skips_null_zen_generation_and_version(runner, data_dir):
+    """Entries with NULL zen_generation or NULL version must be excluded from
+    select — no primary_images row should be created for them."""
+    with Database(data_dir / "psp-etl.db") as db:
+        img = db.insert_image(Image(sha256="null_test", vendor="ASUS"))
+
+        # Entry with NULL zen_generation
+        db.insert_entry(
+            Entry(
+                image_id=img,
+                type_id=20,
+                zen_generation=None,
+                version="1.0.0",
+                rom_index=0,
+                directory_index=0,
+                subprogram=0,
+                instance=0,
+            )
+        )
+        # Entry with NULL version
+        db.insert_entry(
+            Entry(
+                image_id=img,
+                type_id=20,
+                zen_generation="zen5",
+                version=None,
+                rom_index=0,
+                directory_index=1,
+                subprogram=0,
+                instance=0,
+            )
+        )
+
+    result = runner.invoke(cli, ["--data-dir", str(data_dir), "select"])
+    assert result.exit_code == 0
+
+    with Database(data_dir / "psp-etl.db") as db:
+        count = db._conn.execute("SELECT COUNT(*) FROM primary_images").fetchone()[0]
+
+    assert count == 0
