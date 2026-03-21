@@ -1,0 +1,11 @@
+{
+  "uuid": "60a046dc-3859-42b8-a590-9296667388f6",
+  "display_id": null,
+  "title": "scrape command crashes: scrapers require async context manager",
+  "description": "psp-etl scrape all --dry-run crashes with RuntimeError: scrapers (AsRockScraper etc.) define __aenter__/__aexit__ for httpx client lifecycle, but _scrape_async in cli.py instantiates them directly with scraper = cls() instead of async with cls() as scraper. Fix: use async context manager in _scrape_async. TDD: write a failing test in tests/test_cli_scrape.py first (mock the scraper's async context manager protocol and list_boards/list_bios_updates), then fix the code.",
+  "status": "open",
+  "priority": "high",
+  "created_by": "driver",
+  "created_at": "2026-03-21T22:57:48.364026236Z",
+  "updated_at": "2026-03-21T22:57:48.364026236Z"
+}
