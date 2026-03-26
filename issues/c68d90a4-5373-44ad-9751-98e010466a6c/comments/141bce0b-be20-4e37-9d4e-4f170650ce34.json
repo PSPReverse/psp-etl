@@ -1,0 +1,10 @@
+{
+  "uuid": "141bce0b-be20-4e37-9d4e-4f170650ce34",
+  "issue_uuid": "c68d90a4-5373-44ad-9751-98e010466a6c",
+  "author": "driver",
+  "content": "Fixed: converted GigabyteScraper to use httpx.AsyncClient and asyncio.sleep()",
+  "created_at": "2026-03-26T08:49:46.582350216Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAGQ4h+yunub/1ky4m9fx7QdpPhi1GdMl4b6ZnlcwK/id5rxXF5rrFAYMLCKI1HqOzy3ehYXE8v9jGiER54OkEDw=="
+}
