@@ -1,0 +1,10 @@
+{
+  "uuid": "128231e9-c6f5-4cd7-be90-2e9b90d9e1ec",
+  "issue_uuid": "b7578466-3b01-4f49-bc10-2c64652182af",
+  "author": "driver",
+  "content": "Observed: B550 Extreme4 and X570 Phantom Gaming 4 ROMs both have NULL zen_generation for all BHD/BL2 (BIOS-side) directory entries — 499 entries total in the test corpus. PSPTool only attaches zen_generation to PSP directories via PSP IDs; BIOS directories carry no such metadata. The agesa_version fallback returns 'AGESA_UNKNOWN' for these ROMs. One fix: infer generation from other entries in the same ROM (if all PSP entries in the same image are zen3, BHD entries should be too). Another: accept that BIOS-side entries are architecturally unclassified and filter them out of the 'select' pipeline, only tracking PSP-side entries per the primary research goal.",
+  "created_at": "2026-03-26T08:45:39.379161524Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA58m2aqzJpYIe+N8l2xSjRB1iAtbFPz4KR4fCJX6vGpmpZATjVuhYHDrRTLJnp/esbo8I/YX+p/yPq0L6dudKDg=="
+}
