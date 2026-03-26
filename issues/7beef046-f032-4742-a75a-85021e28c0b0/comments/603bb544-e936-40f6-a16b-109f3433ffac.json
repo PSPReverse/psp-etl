@@ -1,0 +1,10 @@
+{
+  "uuid": "603bb544-e936-40f6-a16b-109f3433ffac",
+  "issue_uuid": "7beef046-f032-4742-a75a-85021e28c0b0",
+  "author": "driver",
+  "content": "GigabyteScraper.list_boards(), list_bios_updates(), and download() are declared 'async def' but internally use synchronous httpx.Client (not AsyncClient). This means every HTTP call blocks the entire asyncio event loop during scraping. The scraper never actually yields control to the event loop. With Gigabyte's 2-second rate limiting, this means ~2s blocking per board request with no opportunity for concurrent operations. Fix: convert to httpx.AsyncClient and use 'await client.get()' throughout, or wrap blocking calls in asyncio.to_thread().",
+  "created_at": "2026-03-26T08:45:33.128249794Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAcl2wE2+1q8wQIdIGHE5kCcA+OTGcG/Akmw9Smv+B87y12b8pAxu1SvbF75dig6bAZvxWF6VSmhj/s+U5axg4BA=="
+}
