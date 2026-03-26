@@ -1,6 +1,6 @@
 {
   "uuid": "ee4cf238-4ccf-4f58-a9bf-5901b44a5f8a",
-  "display_id": 32,
+  "display_id": null,
   "title": "Investigate rate limiting and retry strategy for vendor scrapers",
   "status": "closed",
   "priority": "low",

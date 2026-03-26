@@ -1,6 +1,6 @@
 {
   "uuid": "1b8bb9d5-02c8-452d-a915-677130112c53",
-  "display_id": 53,
+  "display_id": null,
   "title": "Write smoke tests for the psp-etl scrape CLI command (issue L9). Augment tests/test_cli_scrape.py. Read the existing file first. Add: (1) 'all' vendor runs all three registered scrapers (asrock, gigabyte, asus) — use three mock scrapers, verify all three appear in output. (2) --limit 1 restricts to 1 board per vendor. (3) --socket am4 filters out am5 boards. (4) non-dry-run download: mock scraper returns a real tmp file with known bytes, verify {sha256}.rom written to data/roms/ and Image row in DB. (5) duplicate skip: second download of same bytes is skipped. All mock scrapers implement async context manager protocol. Run uv run --extra dev pytest tests/ -q. Commit and close issue L9.",
   "description": "Created by crosslink kickoff",
   "status": "open",

@@ -1,6 +1,6 @@
 {
   "uuid": "6535a032-b6c8-4887-8a11-713e70d90eef",
-  "display_id": 43,
+  "display_id": null,
   "title": "smoke test: psp-etl best",
   "description": "Augment tests/test_cli_best.py. Existing coverage is good. Add: (1) verify that best output contains no 64-char hex strings (blob_sha256 must not appear in default output). (2) verify --export-dir creates files named {type_name}_{version}.bin with correct byte content. (3) verify running best on a DB with no primary_images (i.e. select has never been run) prints 'No primary images found' and exits 0. All tests use --data-dir tmp_path.",
   "status": "open",

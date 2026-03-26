@@ -1,6 +1,6 @@
 {
   "uuid": "506124a8-dd7b-4ff6-894a-aba21ed30cf8",
-  "display_id": 49,
+  "display_id": null,
   "title": "Write smoke tests for the psp-etl query CLI command (issue L4). Augment tests/test_cli_query.py. Read the existing file first. Add: (1) combined filter smoke test: --gen zen2 --vendor ASUS --has-strings --format json all together. (2) verify --format csv produces valid parseable CSV with exactly the columns: type_name,version,zen_generation,vendor,model,score. (3) edge case: DB exists but is empty — 'No entries found' and exit 0. Run uv run --extra dev pytest tests/ -q. Commit and close issue L4.",
   "description": "Created by crosslink kickoff",
   "status": "open",
