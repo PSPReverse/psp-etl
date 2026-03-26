@@ -1,6 +1,6 @@
 {
   "uuid": "724063f5-02e4-4ea1-be70-d769ce877fe4",
-  "display_id": null,
+  "display_id": 44,
   "title": "smoke test: psp-etl stats",
   "description": "Write tests/test_cli_stats.py. The stats command has zero CLI-level tests. Tests must cover: (1) empty DB: all tables render with 'no data' placeholders, exit 0. (2) populated DB: pre-insert images, entries, string_analysis rows, verify vendor counts and generation rows appear in output. (3) --gen filter: only entries for that generation appear in tables. (4) score distribution: with entries that have string_analysis, verify the score distribution table has Min/Mean/P90/Max columns populated. All tests use --data-dir tmp_path.",
   "status": "open",

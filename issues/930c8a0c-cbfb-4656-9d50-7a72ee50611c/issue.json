@@ -1,6 +1,6 @@
 {
   "uuid": "930c8a0c-cbfb-4656-9d50-7a72ee50611c",
-  "display_id": null,
+  "display_id": 22,
   "title": "CLI output: human-readable labels instead of raw SHA-256 hashes",
   "status": "closed",
   "priority": "medium",

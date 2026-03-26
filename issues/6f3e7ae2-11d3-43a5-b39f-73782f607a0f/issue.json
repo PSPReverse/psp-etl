@@ -1,6 +1,6 @@
 {
   "uuid": "6f3e7ae2-11d3-43a5-b39f-73782f607a0f",
-  "display_id": null,
+  "display_id": 42,
   "title": "smoke test: psp-etl select",
   "description": "Augment tests/test_cli_select.py. Existing coverage is good. Add: (1) verify that select followed by query shows the correct vendor in results (integration: select picks ASUS over MSI when ASUS has higher score, query confirms ASUS entries dominate). (2) verify running select on a DB with entries that have no version or no zen_generation skips those entries gracefully. All tests use --data-dir tmp_path.",
   "status": "open",

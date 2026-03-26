@@ -1,6 +1,6 @@
 {
   "uuid": "3103797d-347c-4fa3-8de6-05fe000b872e",
-  "display_id": null,
+  "display_id": 39,
   "title": "smoke test: psp-etl ingest",
   "description": "Write tests/test_cli_ingest.py. The ingest command has zero CLI-level tests. Use unittest.mock.patch('psp_etl.ingest.PSPTool') to mock PSPTool.from_file (see existing tests/test_ingest.py for the mock pattern). Tests must cover: (1) happy path: invoke CLI with a tmp fake ROM, verify exit 0, entry created in DB, blob written to data/blobs/. (2) directory input: pass a directory with multiple .rom files. (3) corrupt ROM: PSPTool raises, expect parse_errors row inserted and exit 0. (4) duplicate ROM: re-ingesting same ROM is idempotent (no duplicate entries). All tests use --data-dir tmp_path.",
   "status": "open",
