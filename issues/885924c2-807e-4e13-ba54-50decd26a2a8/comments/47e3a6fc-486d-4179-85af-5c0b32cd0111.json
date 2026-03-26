@@ -1,0 +1,10 @@
+{
+  "uuid": "47e3a6fc-486d-4179-85af-5c0b32cd0111",
+  "issue_uuid": "885924c2-807e-4e13-ba54-50decd26a2a8",
+  "author": "driver",
+  "content": "Fixed in commit 9069954c: added _strip_html() to asus.py that strips HTML tags via regex and unescapes HTML entities. Applied in _fetch_boards_for_socket. Tests added covering tag stripping, entity unescaping, nested tags, and list_boards end-to-end mock.",
+  "created_at": "2026-03-26T08:45:10.099692642Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA5jfSXr+gmRwmphFMwv42+f8XC3EUWwxhn1XqW6JHpqZ85oH3f3F3fJUV0CrLlq2La63De5o18WSuULJimH9FCQ=="
+}
