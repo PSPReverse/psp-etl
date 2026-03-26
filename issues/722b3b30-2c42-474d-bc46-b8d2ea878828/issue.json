@@ -1,0 +1,10 @@
+{
+  "uuid": "722b3b30-2c42-474d-bc46-b8d2ea878828",
+  "display_id": null,
+  "title": "cli: psp-etl ingest missing --vendor and --model options (specified in DESIGN.md)",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-26T08:45:20.575155432Z",
+  "updated_at": "2026-03-26T08:45:20.575155432Z"
+}
