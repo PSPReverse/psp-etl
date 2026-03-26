@@ -1,0 +1,10 @@
+{
+  "uuid": "418ce70b-a68c-483a-9e84-99bbc9857981",
+  "display_id": null,
+  "title": "ingest: multi-generation PSP directory strings only capture first generation",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-03-26T08:45:19.517224931Z",
+  "updated_at": "2026-03-26T08:45:19.517224931Z"
+}
