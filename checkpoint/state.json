@@ -6,16 +6,12 @@
     "-27": {
       "agent_id": "driver",
       "claimed_at": "2026-03-26T08:45:16.939868746Z"
-    },
-    "-15": {
-      "agent_id": "driver",
-      "claimed_at": "2026-03-26T08:45:21.221087120Z"
     }
   },
   "issues": {},
   "watermark": {
-    "timestamp": "2026-03-26T09:50:10.098338455Z",
+    "timestamp": "2026-03-27T18:38:19.643346551Z",
     "agent_id": "driver",
-    "agent_seq": 22
+    "agent_seq": 23
   }
 }
