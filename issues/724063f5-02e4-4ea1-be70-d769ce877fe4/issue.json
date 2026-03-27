@@ -3,11 +3,12 @@
   "display_id": null,
   "title": "smoke test: psp-etl stats",
   "description": "Write tests/test_cli_stats.py. The stats command has zero CLI-level tests. Tests must cover: (1) empty DB: all tables render with 'no data' placeholders, exit 0. (2) populated DB: pre-insert images, entries, string_analysis rows, verify vendor counts and generation rows appear in output. (3) --gen filter: only entries for that generation appear in tables. (4) score distribution: with entries that have string_analysis, verify the score distribution table has Min/Mean/P90/Max columns populated. All tests use --data-dir tmp_path.",
-  "status": "open",
+  "status": "closed",
   "priority": "high",
   "created_by": "driver",
   "created_at": "2026-03-21T23:45:08.836168884Z",
-  "updated_at": "2026-03-21T23:45:08.896128389Z",
+  "updated_at": "2026-03-27T18:37:45.784141193Z",
+  "closed_at": "2026-03-27T18:37:45.784141193Z",
   "labels": [
     "testing"
   ]
