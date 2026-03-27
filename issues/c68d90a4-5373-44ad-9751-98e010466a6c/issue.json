@@ -2,11 +2,12 @@
   "uuid": "c68d90a4-5373-44ad-9751-98e010466a6c",
   "display_id": null,
   "title": "GigabyteScraper: async methods block event loop with sync httpx.Client",
-  "status": "open",
+  "status": "closed",
   "priority": "high",
   "created_by": "driver",
   "created_at": "2026-03-26T08:45:16.758242641Z",
-  "updated_at": "2026-03-26T08:45:16.847693889Z",
+  "updated_at": "2026-03-27T18:43:46.949826793Z",
+  "closed_at": "2026-03-27T18:43:46.949826793Z",
   "labels": [
     "bug"
   ]
