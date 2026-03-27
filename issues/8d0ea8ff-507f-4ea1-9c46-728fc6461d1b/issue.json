@@ -3,11 +3,12 @@
   "display_id": null,
   "title": "smoke test: psp-etl query",
   "description": "Augment tests/test_cli_query.py. Existing coverage is good. Add: (1) verify --entropy-range filter works if implemented, otherwise confirm --has-strings + --min-score + --string all compose correctly in one call. (2) verify --format csv produces valid parseable CSV with correct column headers and no sha256 hashes. (3) verify empty-database edge case produces 'No entries found' and exit 0 (not a crash). All tests use --data-dir tmp_path.",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-03-21T23:44:52.583638952Z",
-  "updated_at": "2026-03-21T23:44:52.642862669Z",
+  "updated_at": "2026-03-27T18:38:19.553974322Z",
+  "closed_at": "2026-03-27T18:38:19.553974322Z",
   "labels": [
     "testing"
   ]
