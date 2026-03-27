@@ -3,11 +3,12 @@
   "display_id": null,
   "title": "Write smoke tests for the psp-etl stats CLI command (issue L1). Create tests/test_cli_stats.py. Tests must cover: (1) empty DB: all four tables render (Images per Vendor, Entries per Generation, String Score Distribution, Score Summary) with 'no data' placeholders, exit 0. (2) populated DB: insert images and entries across two vendors and two generations, verify vendor names and generation names appear in output. (3) populated with string_analysis: verify score distribution table shows Min/Mean/P90/Max values. (4) --gen filter: insert zen2 and zen3 entries, filter to zen2, verify zen3 does not appear in output. All tests use --data-dir tmp_path and CliRunner(env={'COLUMNS': '200'}). Run uv run --extra dev pytest tests/ -q. Commit and close issue L1.",
   "description": "Created by crosslink kickoff",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-03-22T00:44:37.598346891Z",
-  "updated_at": "2026-03-22T00:44:37.663423244Z",
+  "updated_at": "2026-03-27T18:38:19.326917691Z",
+  "closed_at": "2026-03-27T18:38:19.326917691Z",
   "labels": [
     "feature"
   ]
