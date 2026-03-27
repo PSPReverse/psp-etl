@@ -3,11 +3,12 @@
   "display_id": null,
   "title": "smoke test: psp-etl select",
   "description": "Augment tests/test_cli_select.py. Existing coverage is good. Add: (1) verify that select followed by query shows the correct vendor in results (integration: select picks ASUS over MSI when ASUS has higher score, query confirms ASUS entries dominate). (2) verify running select on a DB with entries that have no version or no zen_generation skips those entries gracefully. All tests use --data-dir tmp_path.",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-03-21T23:44:57.432198214Z",
-  "updated_at": "2026-03-21T23:44:57.498859809Z",
+  "updated_at": "2026-03-27T18:43:46.191960931Z",
+  "closed_at": "2026-03-27T18:43:46.191960931Z",
   "labels": [
     "testing"
   ]
