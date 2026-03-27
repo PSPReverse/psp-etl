@@ -2,9 +2,10 @@
   "uuid": "c9c5ab2e-e134-4cce-ab48-ea8d028eb7f4",
   "display_id": null,
   "title": "Implement psp-etl best CLI command (--gen, --type, --export-dir)",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-03-21T16:20:45.621362059Z",
-  "updated_at": "2026-03-21T16:20:45.621362059Z"
+  "updated_at": "2026-03-27T18:43:28.466138704Z",
+  "closed_at": "2026-03-27T18:43:28.466138704Z"
 }
