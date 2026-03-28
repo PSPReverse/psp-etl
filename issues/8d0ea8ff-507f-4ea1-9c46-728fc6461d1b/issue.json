@@ -1,6 +1,6 @@
 {
   "uuid": "8d0ea8ff-507f-4ea1-9c46-728fc6461d1b",
-  "display_id": 41,
+  "display_id": null,
   "title": "smoke test: psp-etl query",
   "description": "Augment tests/test_cli_query.py. Existing coverage is good. Add: (1) verify --entropy-range filter works if implemented, otherwise confirm --has-strings + --min-score + --string all compose correctly in one call. (2) verify --format csv produces valid parseable CSV with correct column headers and no sha256 hashes. (3) verify empty-database edge case produces 'No entries found' and exit 0 (not a crash). All tests use --data-dir tmp_path.",
   "status": "closed",

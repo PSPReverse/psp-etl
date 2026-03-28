@@ -1,6 +1,6 @@
 {
   "uuid": "6dec4ebf-5f98-48d1-a1c8-f67cbd7fcd0d",
-  "display_id": 21,
+  "display_id": null,
   "title": "Implement 5 onboarding UX improvements to the crosslink CLI from https://github.com/forecast-bio/crosslink/issues/365.\n\nThe crosslink source is not checked out locally. Clone https://github.com/forecast-bio/crosslink to a working directory first, then implement:\n\n1. **SSH key fingerprint** (agent.rs): Move SSH key output behind --verbose flag in status(), init(), and bootstrap() (~4 locations in src/commands/agent.rs)\n\n2. **Orientation after init/session start**: Add a short explanation of what crosslink tracks and the minimal workflow after crosslink init and crosslink session start output\n\n3. **Label multi-agent features**: In help text for --container, agent SSH/lock commands, add a note like '[multi-agent]' to signal these are optional for solo use\n\n4. **Lock display context**: In agent status output, add a one-line explanation of what a lock is when locks are shown (e.g. 'Locks: #2, #3 (issues this agent is working on)')\n\n5. **Richer session status**: Add counts of actions recorded, comments added to the session status output\n\nReference the upstream issue for full context. Create a PR on the crosslink repo with all changes.\n",
   "description": "Created by crosslink kickoff",
   "status": "closed",
