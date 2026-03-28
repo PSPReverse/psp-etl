@@ -1,6 +1,6 @@
 {
   "uuid": "9288b29c-d8a1-4e93-9db3-dd3930aeea84",
-  "display_id": null,
+  "display_id": 51,
   "title": "Write smoke tests for the psp-etl best CLI command (issue L19). Augment tests/test_cli_best.py. Read the existing file first. Add: (1) verify output contains zero 64-char hex strings (use re.search(r'[0-9a-f]{64}', output)). (2) verify --export-dir creates {type_name}_{version}.bin files with correct byte content matching blobs on disk. (3) when primary_images table is empty (select never run), output is 'No primary images found' and exit 0. Run uv run --extra dev pytest tests/ -q. Commit and close issue L19.",
   "description": "Created by crosslink kickoff",
   "status": "closed",
