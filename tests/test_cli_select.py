@@ -313,13 +313,13 @@ def test_select_best_entry_id_is_higher_scoring_vendor(runner, data_dir):
     assert row["score"] == 75.0
 
 
-def test_select_skips_null_zen_generation_and_version(runner, data_dir):
-    """Entries with NULL zen_generation or NULL version must be excluded from
-    select — no primary_images row should be created for them."""
+def test_select_skips_null_zen_generation(runner, data_dir):
+    """Entries with NULL zen_generation must be excluded from select.
+    Entries with NULL version are now included (version is not a selection key)."""
     with Database(data_dir / "psp-etl.db") as db:
         img = db.insert_image(Image(sha256="null_test", vendor="ASUS"))
 
-        # Entry with NULL zen_generation
+        # Entry with NULL zen_generation — must be excluded
         db.insert_entry(
             Entry(
                 image_id=img,
@@ -332,7 +332,7 @@ def test_select_skips_null_zen_generation_and_version(runner, data_dir):
                 instance=0,
             )
         )
-        # Entry with NULL version
+        # Entry with NULL version — now included
         db.insert_entry(
             Entry(
                 image_id=img,
@@ -352,4 +352,4 @@ def test_select_skips_null_zen_generation_and_version(runner, data_dir):
     with Database(data_dir / "psp-etl.db") as db:
         count = db._conn.execute("SELECT COUNT(*) FROM primary_images").fetchone()[0]
 
-    assert count == 0
+    assert count == 1  # only the zen5/NULL-version entry, not the NULL-gen entry

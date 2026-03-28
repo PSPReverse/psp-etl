@@ -75,7 +75,7 @@ class ParseError:
 class PrimaryImage:
     zen_generation: str
     type_id: int
-    version: str
+    version: str | None = None
     best_entry_id: int | None = None
     best_image_id: int | None = None
     score: float | None = None
@@ -179,11 +179,11 @@ CREATE TABLE IF NOT EXISTS primary_images (
     id INTEGER PRIMARY KEY,
     zen_generation TEXT NOT NULL,
     type_id INTEGER NOT NULL,
-    version TEXT NOT NULL,
+    version TEXT,
     best_entry_id INTEGER REFERENCES entries(id),
     best_image_id INTEGER REFERENCES images(id),
     score REAL,
-    UNIQUE(zen_generation, type_id, version)
+    UNIQUE(zen_generation, type_id)
 );
 
 CREATE TABLE IF NOT EXISTS parse_errors (
@@ -267,7 +267,15 @@ class Database:
         if table is None:
             return
         # Old table exists without the expression index — recreate it.
-        self._conn.executescript(_MIGRATE_ENTRIES_UNIQUE)
+        # Disable FK checks for the duration: we're only copying rows, not
+        # breaking referential integrity, but SQLite's immediate FK checking
+        # would reject the DROP TABLE while child tables (string_analysis,
+        # primary_images) still reference it.
+        self._conn.execute("PRAGMA foreign_keys=OFF")
+        try:
+            self._conn.executescript(_MIGRATE_ENTRIES_UNIQUE)
+        finally:
+            self._conn.execute("PRAGMA foreign_keys=ON")
 
     # ------------------------------------------------------------------
     # Insert methods
@@ -438,7 +446,8 @@ class Database:
             INSERT INTO primary_images
                 (zen_generation, type_id, version, best_entry_id, best_image_id, score)
             VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(zen_generation, type_id, version) DO UPDATE SET
+            ON CONFLICT(zen_generation, type_id) DO UPDATE SET
+                version       = excluded.version,
                 best_entry_id = excluded.best_entry_id,
                 best_image_id = excluded.best_image_id,
                 score         = excluded.score
@@ -456,17 +465,19 @@ class Database:
         return (
             cur.lastrowid
             or self._conn.execute(
-                """
-            SELECT id FROM primary_images
-            WHERE zen_generation = ? AND type_id = ? AND version = ?
-            """,
-                (primary.zen_generation, primary.type_id, primary.version),
+                "SELECT id FROM primary_images WHERE zen_generation = ? AND type_id = ?",
+                (primary.zen_generation, primary.type_id),
             ).fetchone()["id"]
         )
 
     # ------------------------------------------------------------------
     # Query methods
     # ------------------------------------------------------------------
+
+    def has_entries(self, image_id: int) -> bool:
+        """Return True if any entries have been ingested for this image."""
+        row = self._conn.execute("SELECT 1 FROM entries WHERE image_id = ? LIMIT 1", (image_id,)).fetchone()
+        return row is not None
 
     def get_image_by_sha256(self, sha256: str) -> sqlite3.Row | None:
         return self._conn.execute("SELECT * FROM images WHERE sha256 = ?", (sha256,)).fetchone()
@@ -483,6 +494,7 @@ class Database:
         min_score: float | None = None,
         has_strings: bool = False,
         string_pattern: str | None = None,
+        psp_only: bool = False,
     ) -> list[sqlite3.Row]:
         """Return entries matching the given filters.
 
@@ -492,6 +504,9 @@ class Database:
 
         When *string_pattern* is given, only entries whose blobs contain a
         matching string (SQL LIKE substring match) are returned.
+
+        When *psp_only* is True, excludes BIOS-side directory entries
+        (directory_magic IN ('$BHD', '$BL2')).
         """
         conditions: list[str] = []
         params: list[object] = []
@@ -520,6 +535,9 @@ class Database:
                 "EXISTS (SELECT 1 FROM strings s WHERE s.blob_sha256 = e.blob_sha256 AND s.string LIKE ?)"
             )
             params.append(f"%{string_pattern}%")
+
+        if psp_only:
+            conditions.append("(e.directory_magic NOT IN ('$BHD', '$BL2') OR e.directory_magic IS NULL)")
 
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
         join_type = "INNER" if (has_strings or min_score is not None) else "LEFT"
@@ -560,9 +578,80 @@ class Database:
             LEFT JOIN entries e ON e.id = pi.best_entry_id
             LEFT JOIN images i ON i.id = pi.best_image_id
             {where}
-            ORDER BY pi.zen_generation, pi.type_id, pi.score DESC NULLS LAST
+            GROUP BY pi.zen_generation, pi.type_id
+            HAVING pi.score = MAX(pi.score)
+            ORDER BY pi.zen_generation, pi.type_id
         """
         return self._conn.execute(sql, params).fetchall()
+
+    def get_best_folders(
+        self,
+        zen_generation: str | None = None,
+    ) -> list[sqlite3.Row]:
+        """Return the highest-scoring PSP directory per zen generation.
+
+        Groups entries by (zen_generation, image_id, directory_magic), sums
+        scores, and returns the top-ranked folder per generation.  BIOS-side
+        directories ($BHD/$BL2) are excluded.
+        """
+        conditions = [
+            "e.zen_generation IS NOT NULL",
+            "(e.directory_magic NOT IN ('$BHD', '$BL2') OR e.directory_magic IS NULL)",
+        ]
+        params: list[object] = []
+
+        if zen_generation is not None:
+            conditions.append("e.zen_generation = ?")
+            params.append(zen_generation)
+
+        where = "WHERE " + " AND ".join(conditions)
+
+        sql = f"""
+            SELECT zen_generation, image_id, sha256, vendor, model, socket,
+                   bios_version, directory_magic, total_score, component_count
+            FROM (
+                SELECT
+                    e.zen_generation,
+                    i.id  AS image_id,
+                    i.sha256,
+                    i.vendor, i.model, i.socket, i.bios_version,
+                    e.directory_magic,
+                    SUM(COALESCE(sa.score, 0))  AS total_score,
+                    COUNT(e.id)                 AS component_count,
+                    RANK() OVER (
+                        PARTITION BY e.zen_generation
+                        ORDER BY SUM(COALESCE(sa.score, 0)) DESC
+                    ) AS rnk
+                FROM entries e
+                JOIN images i ON i.id = e.image_id
+                LEFT JOIN string_analysis sa ON sa.entry_id = e.id
+                {where}
+                GROUP BY e.zen_generation, e.image_id, e.directory_magic
+            )
+            WHERE rnk = 1
+            ORDER BY zen_generation
+        """
+        return self._conn.execute(sql, params).fetchall()
+
+    def get_entries_for_folder(
+        self,
+        image_id: int,
+        zen_generation: str,
+        directory_magic: str | None,
+    ) -> list[sqlite3.Row]:
+        """Return all entries for a specific image/directory/generation."""
+        return self._conn.execute(
+            """
+            SELECT e.*, sa.score
+            FROM entries e
+            LEFT JOIN string_analysis sa ON sa.entry_id = e.id
+            WHERE e.image_id = ?
+              AND e.zen_generation = ?
+              AND e.directory_magic IS ?
+            ORDER BY e.type_id
+            """,
+            (image_id, zen_generation, directory_magic),
+        ).fetchall()
 
     def get_unanalyzed_entries(self) -> list[sqlite3.Row]:
         """Return entries that have a blob but no string_analysis row yet."""
@@ -576,15 +665,20 @@ class Database:
             """
         ).fetchall()
 
-    def get_selection_candidates(self) -> list[sqlite3.Row]:
+    def get_selection_candidates(self, psp_only: bool = False) -> list[sqlite3.Row]:
         """Return entries suitable for primary image selection.
 
         Returns all entries with zen_generation and version set, joined with
         images (vendor) and string_analysis (score). Ordered for groupby:
         (zen_generation, type_id, version, score DESC).
+
+        When *psp_only* is True, excludes BIOS-side directory entries
+        (directory_magic IN ('$BHD', '$BL2')) which contain x86/UEFI code
+        rather than PSP ARM firmware.
         """
+        extra = "AND (e.directory_magic NOT IN ('$BHD', '$BL2') OR e.directory_magic IS NULL)" if psp_only else ""
         return self._conn.execute(
-            """
+            f"""
             SELECT e.id AS entry_id, e.image_id, e.zen_generation, e.type_id,
                    e.version, e.firmware_md5, e.type_name, e.blob_sha256,
                    i.vendor, i.model,
@@ -593,7 +687,7 @@ class Database:
             JOIN images i ON i.id = e.image_id
             LEFT JOIN string_analysis sa ON sa.entry_id = e.id
             WHERE e.zen_generation IS NOT NULL
-              AND e.version IS NOT NULL
+              {extra}
             ORDER BY e.zen_generation, e.type_id, e.version,
                      sa.score DESC NULLS LAST, e.id
             """
@@ -696,6 +790,29 @@ class Database:
 
         Returns the number of rows updated.
         """
+        # On re-ingestion, a NULL-gen entry may already have a twin row with
+        # a non-NULL zen_generation (from a previous backfill).  Updating the
+        # NULL row would collide with the twin on idx_entries_unique.  Remove
+        # the stale NULL-gen duplicates first.
+        self._conn.execute(
+            """
+            DELETE FROM entries
+            WHERE image_id = ?
+              AND zen_generation IS NULL
+              AND EXISTS (
+                    SELECT 1 FROM entries e_sib
+                    WHERE e_sib.image_id  = entries.image_id
+                      AND e_sib.rom_index = entries.rom_index
+                      AND COALESCE(e_sib.directory_index, -1)
+                            = COALESCE(entries.directory_index, -1)
+                      AND e_sib.type_id    = entries.type_id
+                      AND e_sib.subprogram = entries.subprogram
+                      AND e_sib.instance   = entries.instance
+                      AND e_sib.zen_generation IS NOT NULL
+              )
+            """,
+            (image_id,),
+        )
         cur = self._conn.execute(
             """
             UPDATE entries

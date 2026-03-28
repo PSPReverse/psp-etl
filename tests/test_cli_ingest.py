@@ -115,11 +115,13 @@ def test_ingest_duplicate_is_idempotent(runner, data_dir, tmp_path):
 
     with patch("psp_etl.ingest.PSPTool.from_file", return_value=_make_fake_psp()):
         result1 = runner.invoke(cli, ["--data-dir", str(data_dir), "ingest", str(rom_path)])
-    with patch("psp_etl.ingest.PSPTool.from_file", return_value=_make_fake_psp()):
+    # Second ingest: PSPTool should NOT be called — the ROM is skipped
+    with patch("psp_etl.ingest.PSPTool.from_file", side_effect=AssertionError("should not re-parse")) as mock_psp:
         result2 = runner.invoke(cli, ["--data-dir", str(data_dir), "ingest", str(rom_path)])
 
     assert result1.exit_code == 0, result1.output
     assert result2.exit_code == 0, result2.output
+    assert "EXISTS" in result2.output
 
     with Database(data_dir / "psp-etl.db") as db:
         image_count = db._conn.execute("SELECT COUNT(*) FROM images").fetchone()[0]
@@ -164,3 +166,47 @@ def test_ingest_no_roms_in_directory(runner, data_dir, tmp_path):
 
     assert result.exit_code == 0, result.output
     assert "No ROM files found" in result.output
+
+
+def test_ingest_vendor_model_flags(runner, data_dir, tmp_path):
+    """--vendor and --model are stored in the images table."""
+    rom_path = tmp_path / "fake.rom"
+    rom_path.write_bytes(b"\xee" * 256)
+
+    with patch("psp_etl.ingest.PSPTool.from_file", return_value=_make_fake_psp()):
+        result = runner.invoke(
+            cli,
+            [
+                "--data-dir",
+                str(data_dir),
+                "ingest",
+                "--vendor",
+                "ASUS",
+                "--model",
+                "PRIME B450M-K II",
+                str(rom_path),
+            ],
+        )
+
+    assert result.exit_code == 0, result.output
+
+    with Database(data_dir / "psp-etl.db") as db:
+        row = db._conn.execute("SELECT vendor, model FROM images").fetchone()
+        assert row["vendor"] == "ASUS"
+        assert row["model"] == "PRIME B450M-K II"
+
+
+def test_ingest_vendor_defaults_to_manual(runner, data_dir, tmp_path):
+    """Without --vendor, vendor defaults to 'manual'."""
+    rom_path = tmp_path / "fake.rom"
+    rom_path.write_bytes(b"\xff" * 256)
+
+    with patch("psp_etl.ingest.PSPTool.from_file", return_value=_make_fake_psp()):
+        result = runner.invoke(cli, ["--data-dir", str(data_dir), "ingest", str(rom_path)])
+
+    assert result.exit_code == 0, result.output
+
+    with Database(data_dir / "psp-etl.db") as db:
+        row = db._conn.execute("SELECT vendor, model FROM images").fetchone()
+        assert row["vendor"] == "manual"
+        assert row["model"] is None

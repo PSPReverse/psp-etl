@@ -181,6 +181,32 @@ def test_backfill_no_op_when_no_known_gen(db):
     assert row["zen_generation"] is None
 
 
+def test_backfill_removes_null_duplicate_of_backfilled_row(db):
+    """Re-ingestion creates a NULL-gen twin of an already-backfilled row.
+
+    backfill_zen_generation must DELETE the stale NULL-gen row rather than
+    trying to UPDATE it to a value that already exists.
+    """
+    image_id = _make_image(db)
+    # First ingest: PSP entry with zen3 + BHD entry with NULL gen
+    db.insert_entry(Entry(image_id=image_id, type_id=1, rom_index=0, directory_index=0, zen_generation="zen3"))
+    null_id = db.insert_entry(Entry(image_id=image_id, type_id=2, rom_index=0, directory_index=1, zen_generation=None))
+    db.backfill_zen_generation(image_id)  # NULL → zen3
+    assert db.get_entry_by_id(null_id)["zen_generation"] == "zen3"
+
+    # Re-ingestion: same BHD file re-inserted with NULL gen.
+    # The unique key for NULL is ('') which no longer exists (it was updated
+    # to 'zen3'), so INSERT OR IGNORE succeeds — we get a stale NULL twin.
+    stale_id = db.insert_entry(Entry(image_id=image_id, type_id=2, rom_index=0, directory_index=1, zen_generation=None))
+    assert stale_id != null_id  # it's a new row
+
+    # Second backfill must not raise IntegrityError; stale NULL row is deleted.
+    updated = db.backfill_zen_generation(image_id)
+    assert updated == 0  # nothing left to update
+    count = db._conn.execute("SELECT COUNT(*) FROM entries WHERE type_id=2").fetchone()[0]
+    assert count == 1  # stale NULL row was removed
+
+
 def test_backfill_skips_already_classified(db):
     """Backfill does not overwrite entries that already have a generation."""
     image_id = _make_image(db)
@@ -438,6 +464,84 @@ def test_query_entries_min_score(db):
     rows = db.query_entries(min_score=10.0)
     assert len(rows) == 1
     assert rows[0]["score"] == 20.0
+
+
+def test_query_entries_psp_only(db):
+    """psp_only=True excludes $BHD/$BL2 entries; NULL-magic entries are kept."""
+    img = db.insert_image(Image(sha256="img1", vendor="ASUS"))
+    psp_entry = db.insert_entry(
+        Entry(
+            image_id=img,
+            type_id=1,
+            zen_generation="zen2",
+            directory_magic="$PSP",
+            rom_index=0,
+            directory_index=0,
+        )
+    )
+    null_magic_entry = db.insert_entry(
+        Entry(
+            image_id=img,
+            type_id=3,
+            zen_generation="zen2",
+            directory_magic=None,
+            rom_index=0,
+            directory_index=2,
+        )
+    )
+    db.insert_entry(
+        Entry(
+            image_id=img,
+            type_id=0x62,
+            zen_generation="zen2",
+            directory_magic="$BHD",
+            rom_index=0,
+            directory_index=1,
+        )
+    )
+
+    all_rows = db.query_entries()
+    assert len(all_rows) == 3
+
+    psp_rows = db.query_entries(psp_only=True)
+    assert len(psp_rows) == 2
+    ids = {r["id"] for r in psp_rows}
+    assert psp_entry in ids
+    assert null_magic_entry in ids
+
+
+def test_get_selection_candidates_psp_only(db):
+    """psp_only=True filters $BHD/$BL2 out; NULL-magic entries are kept."""
+    img = db.insert_image(Image(sha256="img1", vendor="ASUS"))
+    psp_id = db.insert_entry(
+        Entry(
+            image_id=img,
+            type_id=1,
+            zen_generation="zen2",
+            version="1.0",
+            directory_magic="$PSP",
+            rom_index=0,
+            directory_index=0,
+        )
+    )
+    db.insert_entry(
+        Entry(
+            image_id=img,
+            type_id=0x62,
+            zen_generation="zen2",
+            version="2.0",
+            directory_magic="$BHD",
+            rom_index=0,
+            directory_index=1,
+        )
+    )
+
+    all_rows = db.get_selection_candidates()
+    assert len(all_rows) == 2
+
+    psp_rows = db.get_selection_candidates(psp_only=True)
+    assert len(psp_rows) == 1
+    assert psp_rows[0]["entry_id"] == psp_id
 
 
 def test_get_unanalyzed_entries(db):

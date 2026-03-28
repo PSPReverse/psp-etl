@@ -58,8 +58,10 @@ def cli(ctx: click.Context, data_dir: Path) -> None:
 
 @cli.command()
 @click.argument("roms", nargs=-1, type=click.Path(exists=True, path_type=Path), required=True)
+@click.option("--vendor", default="manual", show_default=True, help="Vendor name to record for manually ingested ROMs.")
+@click.option("--model", default=None, help="Board model to record for manually ingested ROMs.")
 @click.pass_context
-def ingest(ctx: click.Context, roms: tuple[Path, ...]) -> None:
+def ingest(ctx: click.Context, roms: tuple[Path, ...], vendor: str, model: str | None) -> None:
     """Parse ROM file(s) or directory, extract PSP entries and blobs."""
     from psp_etl.ingest import ingest_rom
 
@@ -95,12 +97,16 @@ def ingest(ctx: click.Context, roms: tuple[Path, ...]) -> None:
             existing = db.get_image_by_sha256(sha256)
             if existing is not None:
                 image_id = existing["id"]
-                console.print(f"[dim]EXISTS[/dim] {rom_path.name} ({sha256[:12]}…)")
+                if db.has_entries(image_id):
+                    console.print(f"[dim]EXISTS[/dim] {rom_path.name} ({sha256[:12]}…)")
+                    continue
+                console.print(f"[yellow]REPARSE[/yellow] {rom_path.name} ({sha256[:12]}…)")
             else:
                 image_id = db.insert_image(
                     Image(
                         sha256=sha256,
-                        vendor="manual",
+                        vendor=vendor,
+                        model=model,
                         file_size=len(rom_bytes),
                         download_date=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                     )
@@ -197,6 +203,7 @@ def analyze(ctx: click.Context, reanalyze: bool) -> None:
 @click.option("--min-score", type=float, default=None, help="Minimum string analysis score.")
 @click.option("--has-strings", is_flag=True, default=False, help="Only entries with score > 0.")
 @click.option("--string", "string_pattern", type=str, default=None, help="Filter by strings contained in blob.")
+@click.option("--psp-only", is_flag=True, default=False, help="Exclude BIOS-side ($BHD/$BL2) entries.")
 @click.option("--format", "fmt", type=click.Choice(["table", "json", "csv"]), default="table", help="Output format.")
 @click.pass_context
 def query(
@@ -207,6 +214,7 @@ def query(
     min_score: float | None,
     has_strings: bool,
     string_pattern: str | None,
+    psp_only: bool,
     fmt: str,
 ) -> None:
     """Query the PSP entry database."""
@@ -234,6 +242,7 @@ def query(
             min_score=min_score,
             has_strings=has_strings,
             string_pattern=string_pattern,
+            psp_only=psp_only,
         )
 
     if not rows:
@@ -296,18 +305,115 @@ _QUERY_FORMATTERS = {
 
 @cli.command()
 @click.option("--gen", type=click.Choice(["zen1", "zen2", "zen3", "zen4", "zen5"]), help="Filter by Zen generation.")
-@click.option("--type", "type_id", type=str, default=None, help="Filter by hex type_id (e.g. 0x01).")
+@click.option(
+    "--type", "type_id", type=str, default=None, help="Filter by hex type_id (e.g. 0x01). Ignored with --folder."
+)
+@click.option(
+    "--folder",
+    is_flag=True,
+    default=False,
+    help="Show best folder (image+directory) per generation instead of per type.",
+)
+@click.option("--format", "fmt", type=click.Choice(["table", "json"]), default="table", help="Output format.")
 @click.option(
     "--export-dir", type=click.Path(file_okay=False, path_type=Path), default=None, help="Copy best blobs here."
 )
 @click.pass_context
-def best(ctx: click.Context, gen: str | None, type_id: str | None, export_dir: Path | None) -> None:
-    """Show best (highest-scoring) images per (generation, type, version)."""
+def best(
+    ctx: click.Context, gen: str | None, type_id: str | None, folder: bool, fmt: str, export_dir: Path | None
+) -> None:
+    """Show best (highest-scoring) PSP firmware blobs."""
     data_dir: Path = ctx.obj["data_dir"]
     db_path = data_dir / "psp-etl.db"
 
     if not db_path.exists():
         raise click.ClickException(f"Database not found: {db_path}")
+
+    console = Console()
+
+    if folder:
+        with Database(db_path) as db:
+            rows = db.get_best_folders(zen_generation=gen)
+            if not rows:
+                click.echo("No primary images found.")
+                return
+            # Attach per-component detail for JSON; reuse db inside context
+            if fmt == "json":
+                records = []
+                for row in rows:
+                    entries = db.get_entries_for_folder(row["image_id"], row["zen_generation"], row["directory_magic"])
+                    records.append(
+                        {
+                            "zen_generation": row["zen_generation"],
+                            "vendor": row["vendor"],
+                            "model": row["model"],
+                            "bios_version": row["bios_version"],
+                            "sha256": row["sha256"],
+                            "directory_magic": row["directory_magic"],
+                            "total_score": row["total_score"],
+                            "component_count": row["component_count"],
+                            "components": [
+                                {
+                                    "type_id": f"0x{e['type_id']:02x}",
+                                    "type_name": e["type_name"],
+                                    "score": e["score"],
+                                    "blob_sha256": e["blob_sha256"],
+                                    "encrypted": bool(e["encrypted"]),
+                                }
+                                for e in entries
+                            ],
+                        }
+                    )
+                click.echo(json.dumps(records, indent=2))
+                return
+
+        table = Table(title="Best PSP Folder per Generation")
+        table.add_column("Gen", style="cyan")
+        table.add_column("Vendor", style="magenta")
+        table.add_column("Model")
+        table.add_column("BIOS", style="dim")
+        table.add_column("Dir")
+        table.add_column("Score", style="green", justify="right")
+        table.add_column("Components", justify="right")
+        for row in rows:
+            table.add_row(
+                row["zen_generation"] or "—",
+                row["vendor"] or "—",
+                row["model"] or "—",
+                row["bios_version"] or "—",
+                row["directory_magic"] or "—",
+                f"{row['total_score']:.1f}",
+                str(row["component_count"]),
+            )
+        console.print(table)
+
+        if export_dir is not None:
+            blobs_dir = data_dir / "blobs"
+            export_dir.mkdir(parents=True, exist_ok=True)
+            exported = skipped = 0
+            with Database(db_path) as db:
+                for row in rows:
+                    entries = db.get_entries_for_folder(row["image_id"], row["zen_generation"], row["directory_magic"])
+                    for entry in entries:
+                        blob_sha256 = entry["blob_sha256"]
+                        if not blob_sha256:
+                            skipped += 1
+                            continue
+                        src = blobs_dir / f"{blob_sha256}.bin"
+                        if not src.exists():
+                            skipped += 1
+                            continue
+                        type_name = (
+                            (entry["type_name"] or f"type_{entry['type_id']:02x}").replace("/", "_").replace(" ", "_")
+                        )
+                        dest = export_dir / f"{row['zen_generation']}_{type_name}.bin"
+                        shutil.copy2(src, dest)
+                        console.print(f"  [dim]{dest.name}[/dim]")
+                        exported += 1
+            console.print(f"\n[green]Exported {exported} blob(s) to {export_dir}[/green]")
+            if skipped:
+                console.print(f"[yellow]Skipped {skipped} (no blob available)[/yellow]")
+        return
 
     parsed_type_id: int | None = None
     if type_id is not None:
@@ -326,7 +432,25 @@ def best(ctx: click.Context, gen: str | None, type_id: str | None, export_dir: P
         click.echo("No primary images found.")
         return
 
-    console = Console()
+    if fmt == "json":
+        click.echo(
+            json.dumps(
+                [
+                    {
+                        "zen_generation": row["zen_generation"],
+                        "type_id": f"0x{row['type_id']:02x}",
+                        "type_name": row["type_name"],
+                        "score": row["score"],
+                        "vendor": row["vendor"],
+                        "model": row["model"],
+                    }
+                    for row in rows
+                ],
+                indent=2,
+            )
+        )
+        return
+
     table = Table(title="Best PSP Firmware Images")
     table.add_column("Gen", style="cyan")
     table.add_column("Type ID", style="yellow")
@@ -516,7 +640,7 @@ def select(ctx: click.Context) -> None:
 
     console = Console()
     with Database(db_path) as db:
-        candidates = db.get_selection_candidates()
+        candidates = db.get_selection_candidates(psp_only=True)
 
         if not candidates:
             click.echo("No entries with zen_generation and version found.")
@@ -526,10 +650,10 @@ def select(ctx: click.Context) -> None:
         cross_vendor_cases: list[dict] = []
 
         def _group_key(row: sqlite3.Row) -> tuple:
-            return (row["zen_generation"], row["type_id"], row["version"])
+            return (row["zen_generation"], row["type_id"])
 
         for key, group_iter in groupby(candidates, key=_group_key):
-            zen_gen, type_id, version = key
+            zen_gen, type_id = key
             entries = list(group_iter)
             best_entry = entries[0]  # ordered by score DESC
 
@@ -537,7 +661,7 @@ def select(ctx: click.Context) -> None:
                 PrimaryImage(
                     zen_generation=zen_gen,
                     type_id=type_id,
-                    version=version,
+                    version=best_entry["version"],
                     best_entry_id=best_entry["entry_id"],
                     best_image_id=best_entry["image_id"],
                     score=best_entry["score"],
@@ -549,7 +673,7 @@ def select(ctx: click.Context) -> None:
                     "zen_generation": zen_gen,
                     "type_id": type_id,
                     "type_name": best_entry["type_name"] or "",
-                    "version": version,
+                    "version": best_entry["version"],
                     "vendor": best_entry["vendor"],
                     "score": best_entry["score"],
                     "candidates": len(entries),
@@ -564,17 +688,15 @@ def select(ctx: click.Context) -> None:
             if len(distinct_md5s) > 1:
                 vendors_by_md5 = {md5: sorted(vs) for md5, vs in md5_vendors.items() if md5 is not None}
                 logger.info(
-                    "Cross-vendor md5 difference: gen=%s type=%d version=%s — %s",
+                    "Cross-vendor md5 difference: gen=%s type=%d — %s",
                     zen_gen,
                     type_id,
-                    version,
                     vendors_by_md5,
                 )
                 cross_vendor_cases.append(
                     {
                         "zen_generation": zen_gen,
                         "type_id": type_id,
-                        "version": version,
                         "md5_vendors": vendors_by_md5,
                     }
                 )
@@ -605,7 +727,7 @@ def select(ctx: click.Context) -> None:
                 f"\n[yellow]{len(cross_vendor_cases)} cross-vendor compilation difference(s) detected:[/yellow]"
             )
             for case in cross_vendor_cases:
-                console.print(f"  gen={case['zen_generation']} type={case['type_id']} version={case['version']}")
+                console.print(f"  gen={case['zen_generation']} type={case['type_id']}")
                 for md5, vendors in case["md5_vendors"].items():
                     console.print(f"    md5={md5[:12]}… → {', '.join(vendors)}")
 
