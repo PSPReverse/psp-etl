@@ -40,8 +40,6 @@ uv run --extra dev pytest
 
 ## Usage
 
-> **Note**: CLI subcommands are under active development. See [open issues](https://github.com/forecast-bio/crosslink) for status.
-
 ```
 psp-etl --data-dir ./data <command>
 ```

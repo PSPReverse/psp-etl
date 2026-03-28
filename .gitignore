@@ -47,3 +47,10 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+
+# Intellij
+.idea
+
+# Nix
+
+/result*
