@@ -1,4 +1,6 @@
-{ pkgs ? import (import ./npins).nixpkgs {} }:
+{
+  pkgs ? import (import ./npins).nixpkgs { },
+}:
 
 let
   python = pkgs.python312;
@@ -39,11 +41,10 @@ let
     version = "0.1.0";
     pyproject = true;
 
-    src = pkgs.lib.cleanSource ./.;
+    src = pkgs.nix-gitignore.gitignoreSource [] ./.;
 
     build-system = with pythonPackages; [
       setuptools
-      setuptools-scm
     ];
 
     dependencies = with pythonPackages; [
@@ -54,7 +55,7 @@ let
       rich
     ];
 
-    doCheck = false;  # TODO: enable once tests exist
+    doCheck = true;
 
     meta = with pkgs.lib; {
       description = "AMD PSP Firmware Extraction, Transformation & Loading Pipeline";
@@ -74,5 +75,10 @@ in
       ruff
       npins
     ];
+    shellHook = ''
+      if [ -e "$PWD/result/bin/psp-etl" ]; then
+        export PATH="$PWD/result/bin:$PATH"
+      fi
+    '';
   };
 }

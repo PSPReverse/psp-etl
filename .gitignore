@@ -35,6 +35,8 @@
 .direnv
 **/*.egg-info/**
 result
+result-*
+.idea/
 
 # Runtime data (large firmware files, not for version control)
 data/
