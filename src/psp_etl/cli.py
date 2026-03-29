@@ -520,10 +520,14 @@ def _load_scrapers() -> None:
         from psp_etl.scrape.asus import AsusScraper
 
         _VENDOR_SCRAPERS["asus"] = AsusScraper
+    with contextlib.suppress(ImportError):
+        from psp_etl.scrape.msi import MsiScraper
+
+        _VENDOR_SCRAPERS["msi"] = MsiScraper
 
 
 @cli.command()
-@click.argument("vendor", type=click.Choice(["asrock", "gigabyte", "asus", "all"]))
+@click.argument("vendor", type=click.Choice(["asrock", "gigabyte", "asus", "msi", "all"]))
 @click.option("--socket", type=click.Choice(["am4", "am5", "all"]), default="all", help="Filter by CPU socket.")
 @click.option("--limit", type=int, default=None, help="Max boards to process per vendor.")
 @click.option("--dry-run", is_flag=True, help="List download URLs without downloading.")
