@@ -1,6 +1,6 @@
 {
   "uuid": "b8cdaeaf-dfaa-4f22-a1ee-c4740c060c2d",
-  "display_id": 28,
+  "display_id": null,
   "title": "Implement psp-etl best CLI command (--gen, --type, --export-dir)",
   "status": "closed",
   "priority": "medium",
