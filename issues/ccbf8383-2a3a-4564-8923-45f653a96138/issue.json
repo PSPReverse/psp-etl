@@ -1,6 +1,6 @@
 {
   "uuid": "ccbf8383-2a3a-4564-8923-45f653a96138",
-  "display_id": 45,
+  "display_id": null,
   "title": "smoke test: psp-etl scrape",
   "description": "Augment tests/test_cli_scrape.py. Existing test covers dry-run with a single mock scraper. Add: (1) verify 'all' vendor dispatches to all registered scrapers (mock all three: asrock, gigabyte, asus). (2) verify --limit N restricts boards per vendor. (3) verify --socket am4 filters out am5 boards. (4) verify a download (non-dry-run) with a mock scraper writes a .rom file to data/roms/{sha256}.rom and inserts an Image row. (5) verify duplicate download is skipped (already-present sha256). All tests use --data-dir tmp_path and mock scrapers that implement the async context manager protocol.",
   "status": "closed",
