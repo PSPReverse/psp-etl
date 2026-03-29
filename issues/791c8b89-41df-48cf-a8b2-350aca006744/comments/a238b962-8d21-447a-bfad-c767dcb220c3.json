@@ -1,0 +1,10 @@
+{
+  "uuid": "a238b962-8d21-447a-bfad-c767dcb220c3",
+  "issue_uuid": "791c8b89-41df-48cf-a8b2-350aca006744",
+  "author": "driver",
+  "content": "Design doc drafted: .design/ghidra-export.md — image-level export (all components from one image), composable path syntax {vendor}/{model}/{bios_version}/$PSP/0x08, analyzeHeadless against Ghidra Server, firmware knowledge TOML for enrichment. Companion design: .design/firmware-knowledge-toml.md",
+  "created_at": "2026-03-29T12:35:33.109547917Z",
+  "kind": "plan",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAYwsZrH6TZH6dJMv8aCCKok4DkmnM/pMer9ibAUuxW4X96Hm8HHre26tYgK8eYUWTPqy9sk/9YqnQi4LVhH0FAw=="
+}
