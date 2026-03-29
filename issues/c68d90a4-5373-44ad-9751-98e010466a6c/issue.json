@@ -1,6 +1,6 @@
 {
   "uuid": "c68d90a4-5373-44ad-9751-98e010466a6c",
-  "display_id": 54,
+  "display_id": null,
   "title": "GigabyteScraper: async methods block event loop with sync httpx.Client",
   "status": "closed",
   "priority": "high",

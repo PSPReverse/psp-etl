@@ -1,6 +1,6 @@
 {
   "uuid": "2a83d999-857a-420e-87fd-4eed9e21ff65",
-  "display_id": 26,
+  "display_id": null,
   "title": "Implement psp-etl analyze CLI command",
   "status": "closed",
   "priority": "high",

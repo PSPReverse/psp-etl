@@ -1,6 +1,6 @@
 {
   "uuid": "ed4ff18a-578c-4553-b458-c6abe291745d",
-  "display_id": 55,
+  "display_id": null,
   "title": "ingest: BIOS-side directories ($BHD/$BL2) always get NULL zen_generation",
   "status": "closed",
   "priority": "medium",

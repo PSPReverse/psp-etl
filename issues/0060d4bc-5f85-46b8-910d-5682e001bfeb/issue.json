@@ -1,6 +1,6 @@
 {
   "uuid": "0060d4bc-5f85-46b8-910d-5682e001bfeb",
-  "display_id": 50,
+  "display_id": null,
   "title": "Write smoke tests for the psp-etl select CLI command (issue L3). Augment tests/test_cli_select.py. Read the existing file first. Add: (1) integration test: insert entries for two vendors with different scores, run select, then verify via direct DB query that the higher-scoring entry is the best_entry_id in primary_images. (2) entries with NULL zen_generation or NULL version are skipped by select (verify they produce no primary_images row). Run uv run --extra dev pytest tests/ -q. Commit and close issue L3.",
   "description": "Created by crosslink kickoff",
   "status": "closed",
