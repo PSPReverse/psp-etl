@@ -54,3 +54,11 @@ __pycache__/
 # Nix
 
 /result*
+
+# Ghidra project files
+*.gzf
+
+# Ghidra data type archives — proprietary (SECT), never ship
+*.gdt
+
+presentation/slides.pdf

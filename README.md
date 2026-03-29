@@ -102,6 +102,18 @@ psp-etl/
 ├── pyproject.toml
 ├── DESIGN.md                  # Full pipeline specification
 ├── .design/                   # Architecture decision records
+├── ghidra_scripts/            # Ghidra headless/GUI scripts (see ghidra_scripts/README.md)
+│   ├── analysis/              #   Function renaming, MMIO annotation, string xref recovery
+│   ├── transfer/              #   Cross-program label transfer (fuzzy matching)
+│   ├── import_export/         #   GZF pack/unpack, type import, memory map export
+│   ├── setup/                 #   Memory maps, PSP types, entry point config
+│   ├── project/               #   Rename, reorganize, fix archives and links
+│   └── diagnostics/           #   Read-only inspection (list types, archives, links)
+├── data/
+│   ├── ghidra_archives/       # PSP data type archives (.gdt)
+│   ├── ghidra/                # Local Ghidra project (gitignored)
+│   ├── roms/                  # Downloaded BIOS ROMs (gitignored)
+│   └── blobs/                 # Extracted PSP firmware blobs (gitignored)
 ├── src/psp_etl/
 │   ├── cli.py
 │   ├── db.py                  # SQLite schema and Database class
