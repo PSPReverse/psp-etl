@@ -1,6 +1,6 @@
 {
   "uuid": "b877e417-8f3e-455f-a3d9-40d5416d1b57",
-  "display_id": 40,
+  "display_id": null,
   "title": "smoke test: psp-etl analyze",
   "description": "Augment tests/test_cli_analyze.py. Existing tests cover the basics but use artificial blob content. Add: (1) a pipeline smoke test that starts from real blobs written by real analyze_blob() (not hand-crafted bytes) — create a blob with a known ASCII string, run analyze, verify score > 0. (2) verify --reanalyze actually overwrites stale scores. (3) verify 'Analyzed N unique blob(s).' summary line is present in output. All tests use --data-dir tmp_path.",
   "status": "open",
