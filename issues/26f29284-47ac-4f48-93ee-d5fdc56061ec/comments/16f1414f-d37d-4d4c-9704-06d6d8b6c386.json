@@ -1,0 +1,10 @@
+{
+  "uuid": "16f1414f-d37d-4d4c-9704-06d6d8b6c386",
+  "issue_uuid": "26f29284-47ac-4f48-93ee-d5fdc56061ec",
+  "author": "driver",
+  "content": "Implemented: CDX + CDN range-request board identification, CLI registered, 31 tests passing.",
+  "created_at": "2026-04-02T23:58:22.378854181Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZQld3kThD8Ndb016/H00Wp3xk0BKvDhIiEM31Crmo3mq2PHxj+xs13OF2n1SlFvMHNG81OPLXqcKo2jB/Rs/CA=="
+}
