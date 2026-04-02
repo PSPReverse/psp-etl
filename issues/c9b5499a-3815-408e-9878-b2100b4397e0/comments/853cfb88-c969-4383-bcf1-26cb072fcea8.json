@@ -1,0 +1,10 @@
+{
+  "uuid": "853cfb88-c969-4383-bcf1-26cb072fcea8",
+  "issue_uuid": "c9b5499a-3815-408e-9878-b2100b4397e0",
+  "author": "driver",
+  "content": "## Scope\n\nCreate a Typst slide deck presenting psp-etl to a security research colleague, plus an interactive demo script.\n\n## Typst Presentation\n\nSlides should cover:\n- What is the AMD PSP? Why does it matter for firmware security research?\n- What psp-etl does: scrape → ingest → analyze → select pipeline\n- Corpus stats: ~1200 BIOS images, ~21k unique blobs, vendor coverage (ASUS, ASRock, MSI, Gigabyte)\n- What we can extract: ABL blobs, format strings, scoring, best-blob selection\n- Use case: diffing PSP firmware across versions / chipset generations\n- Presenter notes on every slide\n\n## Interactive Demo Script (demo.py)\n\nInteractive Python script in the repo root. User presses Enter to advance through each step:\n\n1. Scrape a small corpus (e.g. psp-etl scrape asrock --socket am4 --limit 2)\n2. Ingest the downloaded ROMs (psp-etl ingest data/roms/)\n3. Analyze blobs (psp-etl analyze)\n4. Select best blobs (psp-etl select)\n5. Show stats (psp-etl stats)\n6. Query top blobs (psp-etl query --psp-only --limit 10)\n\nRequirements:\n- Works on a clean data/ directory (delete data/ before running)\n- Each step prints what it will run, waits for Enter, runs it, then prints a brief summary of what happened\n- Graceful error handling (wrap subprocess calls, show stderr on failure)\n- No external deps beyond stdlib + click (which psp-etl already requires)\n",
+  "created_at": "2026-04-02T23:58:43.557563875Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABADwwqhzJ2Iwltpo3Gkq1HIDoU4wY/ypGW+bIRfFphKKZqM3TtzjXsxo0z6ZNkoXsJBg933QIj7mCHDb52sCzNCQ=="
+}
