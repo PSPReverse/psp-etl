@@ -1,6 +1,6 @@
 {
   "uuid": "2d934776-4b2a-4652-bc57-5047f8b97703",
-  "display_id": null,
+  "display_id": 34,
   "title": "Implement psp-etl analyze CLI command (issue L1). Add to src/psp_etl/cli.py: 'analyze' subcommand with --reanalyze flag. Fetches unanalyzed blobs via db.get_unanalyzed_entries(), calls strings.analyze_blob() for each unique blob_sha256, stores results via db.insert_string_analysis() and db.insert_strings(). With --reanalyze, re-analyzes all. Shows rich progress bar. See DESIGN.md CLI Interface.",
   "description": "Created by crosslink kickoff",
   "status": "closed",
