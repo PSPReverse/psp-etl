@@ -1,6 +1,6 @@
 {
   "uuid": "7e16da5d-71ee-4b50-be8a-ccf68e57c85a",
-  "display_id": null,
+  "display_id": 25,
   "title": "Implement psp-etl ingest CLI command",
   "status": "closed",
   "priority": "high",
