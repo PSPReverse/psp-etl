@@ -1,0 +1,10 @@
+{
+  "uuid": "50b5f3f0-e16a-438e-b648-e1e98a6940e2",
+  "issue_uuid": "f9a5d836-4d54-4b71-a79b-abd9806e5ece",
+  "author": "driver",
+  "content": "## Problem\n\nSHAs should never be user-facing. Currently, Ghidra programs are named `{sha256}.bin` which is unreadable in the project explorer.\n\n## Desired naming\n\nPrograms should be named by their type name from the DB, e.g.:\n- `PSP_FW_BOOT_LOADER` (type 0x01)\n- `ABL5` (type 0x35)\n- `PSP_FW_TRUSTED_OS` (type 0x02)\n\nWhen there are multiple blobs of the same type (different versions), append a short discriminator — e.g. `ABL5_a`, `ABL5_b` sorted by score descending, or `ABL5_{sha[:8]}` as fallback.\n\n## Scope\n\nThis applies to:\n1. The `analyzeHeadless -import` invocation (program name is derived from the import filename)\n2. Any future `psp-etl export ghidra` command\n3. The `best --export-dir` filenames already use type names — should be consistent\n\n## Fix approach\n\nEither:\n- (a) Symlink/copy blobs to temp files with human-readable names before import\n- (b) Use `analyzeHeadless -import ... -overwrite` with a renamed program after import\n- (c) Create symlinks in a temp dir: `ABL5.bin -> ../../blobs/{sha}.bin`, then import the symlink\n\nThe DB has `type_name` on every entry — use that, stripping the `~0xNN` suffix.",
+  "created_at": "2026-04-04T20:38:10.176732141Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAnqg/VroPVRA3aPhNyE4DeTFQwDlwSuRjRfMB71cGsyFyl/QFt4ArcG1CI8G+xa4KhaQt9VviG38/O8mcjwvSBA=="
+}
