@@ -1,0 +1,10 @@
+{
+  "uuid": "f9a5d836-4d54-4b71-a79b-abd9806e5ece",
+  "display_id": null,
+  "title": "Ghidra programs named by SHA256 — use human-readable type names instead",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-04-04T20:37:54.328853416Z",
+  "updated_at": "2026-04-04T20:37:54.328853416Z"
+}
