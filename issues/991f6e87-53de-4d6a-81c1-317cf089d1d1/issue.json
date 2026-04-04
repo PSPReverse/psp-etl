@@ -1,0 +1,10 @@
+{
+  "uuid": "991f6e87-53de-4d6a-81c1-317cf089d1d1",
+  "display_id": null,
+  "title": "MCP server for Ghidra repo bridge (HTTP-based)",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-04-04T17:43:41.574074254Z",
+  "updated_at": "2026-04-04T17:43:41.574074254Z"
+}
