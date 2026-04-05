@@ -2,9 +2,10 @@
   "uuid": "e5bcc9d5-1414-4908-810d-95e573d39e36",
   "display_id": null,
   "title": "Annotate mailbox register writes in zen2 bootloaders",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-04-05T15:52:55.840349418Z",
-  "updated_at": "2026-04-05T15:52:55.840349418Z"
+  "updated_at": "2026-04-05T17:31:56.431328211Z",
+  "closed_at": "2026-04-05T17:31:56.431328211Z"
 }
