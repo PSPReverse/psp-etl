@@ -1,0 +1,10 @@
+{
+  "uuid": "7a02971d-f3f0-45ce-a651-c81143866977",
+  "issue_uuid": "e5bcc9d5-1414-4908-810d-95e573d39e36",
+  "author": "driver",
+  "content": "From memory_layout.json: Mailbox registers are at 0x3010570-0x301057b. The SECT 0d15 program labels BootROMServicePage at 0x4f000 and has MMIO at 0x3000000-0x3ffffff but doesn't specifically annotate the mailbox sub-region.\n\nWrite a Ghidra script (AnnotateMMIO.java) that:\n1. Scans all instructions for memory references (LDR/STR) to MMIO addresses\n2. Specifically flags writes to 0x3010570-0x301057b as 'Mailbox' accesses\n3. Creates labels at referenced MMIO addresses using the memory_layout.json names (CCP_Control, IRQ_Controller, Timer, Mailbox, STS, SMN_MapCtrl, x86_MapCtrl)\n4. Adds plate comments at STR instructions that write to known MMIO regions\n5. Creates an enum or struct for the mailbox register offsets if multiple distinct offsets are written\n\nAlso investigate: the low transfer count from SECT may be because:\n- Our binary is a different enough version that bytes diverge\n- The SECT programs had limited RE done on them (many FUN_xxxx names)\n- The instruction hash only matches if the first 20 instructions are identical (no register renaming tolerance)\n\nConsider writing a looser correlator that:\n- Hashes instruction mnemonics only (ignoring register operands) for the first 15 instructions\n- Matches on function size within 10% + first 5 mnemonics\n",
+  "created_at": "2026-04-05T15:53:12.524844264Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVtd9UHcGzUqDsPDcVNjkOs66BhgHMwLQffJgaAX9K1fHsvH2YCo/3xojFC1Mtatb84ICLGYxytpx0hLmH6YcCw=="
+}
