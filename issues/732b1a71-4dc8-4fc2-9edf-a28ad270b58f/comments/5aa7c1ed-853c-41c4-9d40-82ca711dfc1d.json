@@ -1,0 +1,10 @@
+{
+  "uuid": "5aa7c1ed-853c-41c4-9d40-82ca711dfc1d",
+  "issue_uuid": "732b1a71-4dc8-4fc2-9edf-a28ad270b58f",
+  "author": "driver",
+  "content": "Run InferPrintf.java on all 23 zen2 programs. The script scans for format strings, traces xrefs to find callee functions, and applies varargs char* fmt signatures to functions called with format strings at >=3 call sites.\n\nScript: data/ghidra_scripts/InferPrintf.java\nCommand per program:\n  ghidra-analyzeHeadless data/ghidra psp-etl/zen2 -process <NAME> -noanalysis -scriptPath data/ghidra_scripts -postScript InferPrintf.java 3\n\nPrograms to process: ABL1-7, ABL1_b-ABL6_b, PSP_FW_BOOT_LOADER, PSP_FW_BOOT_LOADER_b, PSP_FW_RECOVERY_BOOT_LOADER, PSP_FW_RECOVERY_BOOT_LOADER_b, PSP_FW_TRUSTED_OS, PSP_BOOT_TIME_TRUSTLETS (x4), DRIVER_ENTRIES\n\nBlocked by Ghidra project lock — retry when user closes Ghidra GUI.",
+  "created_at": "2026-04-05T15:51:13.150165130Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZDocU8+3Ikn98F6osGn99wLRxMc0FLpM/eJaICj/6xlxFOPl4Wx05nPy3ouPeo2lrCpFx4NdysakllWlftfCCQ=="
+}
