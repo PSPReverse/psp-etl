@@ -1,0 +1,10 @@
+{
+  "uuid": "a542f34d-7b35-4fd3-b6ec-dee7cd344cf1",
+  "issue_uuid": "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a",
+  "author": "driver",
+  "content": "The SECT type archives (PspSvcIf, PspHw, CcpIf, PspSev, SecOS, TE, VMSA, ArXbShared, TrustedOsInterface) were imported as types into each zen2 program, but the .gdt archive references don't resolve in Ghidra's Data Type Manager.\n\n## Root Cause\nThe GZF files for these are Java-serialized Data Type Archives, not packed program databases. We imported them by symlinking as .gdt in data/sect_gdt/ and using FileDataTypeManager.openFileArchive(). The types were copied into each program's local DTM, but the archive source references still point to non-existent paths.\n\n## Fix Options\n1. Install the .gdt files as proper Ghidra archives in the user's Ghidra archive directory (~/.config/ghidra/.../data/)\n2. Write a script that clears the stale source archive references after type import\n3. Copy the .gdt files into the Ghidra project as shared archives (if the API supports it)\n\n## What Needs to Happen\n- The types themselves ARE present in each program (PSPSTATUS, CCP structs, etc.)\n- But the Data Type Manager shows broken archive links\n- When Ghidra tries to sync with the source archive, it fails\n- Need to either fix the archive paths or sever the source archive links so Ghidra treats the types as local",
+  "created_at": "2026-04-07T23:24:36.288265867Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAli9aGvFNdgSITVxHVlNAmZTsKQsYgq+sOhDE/JbxI7hc4VwNOAC2KO2GYxQVRPPt9oMdxnnwIRZr81mSFl+DBA=="
+}
