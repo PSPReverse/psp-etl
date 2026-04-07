@@ -1,6 +1,6 @@
 {
   "uuid": "991f6e87-53de-4d6a-81c1-317cf089d1d1",
-  "display_id": null,
+  "display_id": 60,
   "title": "MCP server for Ghidra repo bridge (HTTP-based)",
   "status": "closed",
   "priority": "medium",
