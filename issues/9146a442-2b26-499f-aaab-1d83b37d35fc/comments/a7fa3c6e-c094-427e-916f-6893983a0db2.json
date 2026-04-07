@@ -1,0 +1,10 @@
+{
+  "uuid": "a7fa3c6e-c094-427e-916f-6893983a0db2",
+  "issue_uuid": "9146a442-2b26-499f-aaab-1d83b37d35fc",
+  "author": "driver",
+  "content": "Phase A complete. Results:\n- String xref recovery: 30 new xrefs (most already found by Ghidra). ~2700 strings remain orphaned (dead code or table-accessed).\n- InferPrintf: 20 printf signatures applied (same as before — no new ones from xref recovery)\n- SmartRename: 1,218 functions renamed across 18 programs via SVC ID matching + string pattern matching\n- Pattern analysis: 550-line report captured for 5 key programs (PSP_FW_BOOT_LOADER, ABL5, ABL6, ABL1, PSP_FW_TRUSTED_OS)",
+  "created_at": "2026-04-07T23:57:25.635535094Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAEAdMo9e/NjRnomCnufwsSQgstYx7qwG4JET0Di6VKrGQW8ch2m/JO3SsrfTZUAMYiNfIx5U1Z6cg145DnUyOCA=="
+}
