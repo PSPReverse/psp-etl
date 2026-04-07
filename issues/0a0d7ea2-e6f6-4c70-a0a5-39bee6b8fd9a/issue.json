@@ -1,0 +1,10 @@
+{
+  "uuid": "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a",
+  "display_id": null,
+  "title": "Fix SECT .gdt type archive resolution in Ghidra project",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-04-07T23:24:20.578902423Z",
+  "updated_at": "2026-04-07T23:24:20.578902423Z"
+}
