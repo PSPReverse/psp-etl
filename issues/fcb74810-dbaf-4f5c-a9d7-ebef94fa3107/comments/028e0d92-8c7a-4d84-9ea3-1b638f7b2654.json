@@ -1,0 +1,10 @@
+{
+  "uuid": "028e0d92-8c7a-4d84-9ea3-1b638f7b2654",
+  "issue_uuid": "fcb74810-dbaf-4f5c-a9d7-ebef94fa3107",
+  "author": "driver",
+  "content": "Zen4 validation complete. 5 functions transferred via loose matching, 253 via SVC naming, 6 printf signatures, 251 MMIO annotations. MMIO layout and SVC numbers are cross-generational. Coherent image (126 components) in /zen4_coherent/ for dynamic instrumentation.",
+  "created_at": "2026-04-08T00:55:33.994582314Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABANrNN15hohwIjGnOCiY8yw5OqnJYQx6xmH/XWBpENynLnQeVtCCoyLnx9Ns7oMWzt2EQ+W5dlEjMEsUJSH4r1AQ=="
+}
