@@ -1,0 +1,10 @@
+{
+  "uuid": "f9b0e4f0-5120-4f6b-9485-b703c3a4ad64",
+  "issue_uuid": "f8f63bf0-d897-420f-b93a-b3f1278015c9",
+  "author": "driver",
+  "content": "Zen5 corpus scraped: 5,262 entries, 547 unique blobs, max_score=338. Zen4 expanded to 8,770 entries, 887 blobs. Ghidra import was attempted but may have been blocked by lock contention with other agents. Slides were updated by the parallel fix agent. Corpus data is ready for future Ghidra import.",
+  "created_at": "2026-04-08T12:58:50.780142792Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAibYz1iPVdqef8Vvr8n1gpocn/E/LqF1i+e4ok6rdwL4WPuekEaMnDbl2J5gi4CN/YAFJvnbPef82yoKoU3KkCA=="
+}
