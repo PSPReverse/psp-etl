@@ -2,9 +2,10 @@
   "uuid": "fcb74810-dbaf-4f5c-a9d7-ebef94fa3107",
   "display_id": null,
   "title": "Zen4 validation: apply zen2 patterns to zen4 blobs + coherent image import",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-04-07T23:37:01.997771704Z",
-  "updated_at": "2026-04-07T23:37:01.997771704Z"
+  "updated_at": "2026-04-08T00:55:34.067148835Z",
+  "closed_at": "2026-04-08T00:55:34.067148835Z"
 }
