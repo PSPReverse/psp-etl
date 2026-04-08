@@ -1,0 +1,10 @@
+{
+  "uuid": "0aefa0fb-8a48-4981-9f95-a7d3430d19b0",
+  "issue_uuid": "f8f63bf0-d897-420f-b93a-b3f1278015c9",
+  "author": "driver",
+  "content": "Zen5 = Ryzen 9000 series (Granite Ridge/Strix Point). AGESA pattern: CBS-STX/TUR/KRK.\n\nSteps:\n1. Scrape more AM5 boards (X870E, X870, B850 with newer BIOS): psp-etl scrape asus --socket am5 --limit 10\n2. Also try ASRock AM5: psp-etl scrape asrock --socket am5 --limit 5\n3. Ingest + analyze + select\n4. Check if any entries classify as zen5\n5. If yes: import richest per type into /zen5/ in Ghidra, apply types, transfer zen2/zen4 knowledge\n6. Import coherent image into /zen5_coherent/\n7. Update presentation slides with zen5 stats\n\nAlso update slide 8 (Key Findings) score distribution table to include zen4 data.",
+  "created_at": "2026-04-08T12:25:34.783129623Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAsJztEJlj2Ae4gVKcUg2b5B8HymsaAH4YwLhCHElv2f4lyL9vxo/iZlq7SoWMFAuMIxyDPuwleWjQC7zsuul3BQ=="
+}
