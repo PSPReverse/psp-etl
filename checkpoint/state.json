@@ -2,16 +2,11 @@
   "next_display_id": 1,
   "next_comment_id": 1,
   "display_id_map": {},
-  "locks": {
-    "-5": {
-      "agent_id": "driver",
-      "claimed_at": "2026-04-08T19:39:01.723430028Z"
-    }
-  },
+  "locks": {},
   "issues": {},
   "watermark": {
-    "timestamp": "2026-04-08T19:39:01.723430028Z",
+    "timestamp": "2026-04-08T20:13:55.119238554Z",
     "agent_id": "driver",
-    "agent_seq": 37
+    "agent_seq": 38
   }
 }
