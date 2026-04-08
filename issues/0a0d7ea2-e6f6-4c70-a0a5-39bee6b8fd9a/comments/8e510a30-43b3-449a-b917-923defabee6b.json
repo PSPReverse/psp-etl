@@ -1,0 +1,10 @@
+{
+  "uuid": "8e510a30-43b3-449a-b917-923defabee6b",
+  "issue_uuid": "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a",
+  "author": "driver",
+  "content": "Fixed. Copied .gdt archives to ~/.config/ghidra/ghidra_12.0.2_NIX/data/ and ran UpdateArchivePaths.java on all zen2 programs (23 total). The script uses a remove+re-resolve+re-associate cycle: for each broken FILE-type source archive (path=null), it opens the matching .gdt via FileDataTypeManager, collects linked data types, removes the broken archive reference, resolves a fresh one from the .gdt, and re-associates all types. 7 archives fixed per program with types: CcpIf(33), PspSev(80), PspSvcIf(21), TE(11), PspHw(1), ArXbShared(1), TrustedOsInterface(1). zen4/zen4_coherent had no broken refs. generic_clib(path=null) left as-is (Ghidra built-in). PROJECT-type archives (VMSA, SecOS) were already fine.",
+  "created_at": "2026-04-08T07:07:26.682077776Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAFC2GAhns2fEE7rTSGcmzWpONFZmnGRfma9+ibqfLOelcbonNZeJyhqjzyEruzkgV85KpMa7zONTLx+IbdOHCDw=="
+}
