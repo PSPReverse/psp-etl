@@ -1,0 +1,10 @@
+{
+  "uuid": "12a5c397-653c-45d6-aa46-e170d44fdbfa",
+  "issue_uuid": "c2fee3a5-2a20-46b3-8930-d2b6766ce78b",
+  "author": "driver",
+  "content": "Session auto-ended (stale after 1277 minutes). No handoff notes provided.",
+  "created_at": "2026-04-08T20:13:55.952812478Z",
+  "kind": "handoff",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAeB/AJkV/IWjiTVkVPAUyuVFVguHSSl7ooY/dgvl9GuJy6Ag4l8/S0YRBSRGpiRXdswvPbKKkCRCYkCki2FEIDg=="
+}
