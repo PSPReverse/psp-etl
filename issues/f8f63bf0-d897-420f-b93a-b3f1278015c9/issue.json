@@ -1,0 +1,10 @@
+{
+  "uuid": "f8f63bf0-d897-420f-b93a-b3f1278015c9",
+  "display_id": null,
+  "title": "Scrape zen5 corpus and import into Ghidra project",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-04-08T12:24:35.107609442Z",
+  "updated_at": "2026-04-08T12:24:35.107609442Z"
+}
