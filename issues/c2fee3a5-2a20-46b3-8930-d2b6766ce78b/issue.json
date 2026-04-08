@@ -1,6 +1,6 @@
 {
   "uuid": "c2fee3a5-2a20-46b3-8930-d2b6766ce78b",
-  "display_id": null,
+  "display_id": 68,
   "title": "Implement firmware knowledge TOML loader (knowledge.py)",
   "status": "open",
   "priority": "medium",
