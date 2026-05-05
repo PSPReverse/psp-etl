@@ -1,0 +1,11 @@
+{
+  "uuid": "1b493262-3d67-423e-b318-f9672ed197af",
+  "display_id": 69,
+  "title": "Track individual strings per blob in SQLite for superset analysis",
+  "description": "Currently string_analysis only stores aggregate counts (total_strings, unique_strings, format_strings, etc.) per entry. We need a table that stores each individual string with its source blob SHA256, so we can:\n\n1. Compute whether one blob's string set is a strict superset of another's\n2. Diff string sets between firmware versions (e.g. zen5 TrustedOS v0.2B.0.49 has 124 strings, v0.42.0.13 has 130 — what are the 6 new ones?)\n3. Choose the optimal reference blob for label transfer (the one with the most unique strings, not just highest score)\n\nMotivation: the zen5 TrustedOS we imported (v0.2B.0.49) has 124 strings with 2 format strings, but v0.42.0.13 has 130 strings with only 1 format string — and v0.2B.0.50 has 128 strings with 3 format strings. Without per-string tracking we can't tell if the 130-string version is a superset or just has different strings.\n\nProposed schema:\nCREATE TABLE blob_strings (\n    id INTEGER PRIMARY KEY,\n    blob_sha256 TEXT NOT NULL,\n    string_value TEXT NOT NULL,\n    string_type TEXT,  -- format, error, function_name, postcode, descriptive\n    offset INTEGER,    -- byte offset within the blob\n    UNIQUE(blob_sha256, offset)\n);\n\nThis enables queries like:\n- Find strings unique to blob A vs blob B\n- Find the blob that is a strict superset of all others for a given type+generation\n- Diff string sets across firmware versions",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-05-05T23:27:28.649144989Z",
+  "updated_at": "2026-05-05T23:27:28.649144989Z"
+}
