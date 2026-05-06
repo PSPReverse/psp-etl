@@ -1,0 +1,10 @@
+{
+  "uuid": "e48338bb-ec73-4213-af2d-adfac892b071",
+  "issue_uuid": "75e62a6f-2b9b-4ace-9a88-166e84f1de7e",
+  "author": "driver",
+  "content": "Added ApplyPspAddressSpaces.java setup script. Creates SMN (32-bit overlay of ram) + X86 (64-bit overlay of OTHER) address spaces, registers SMN_Pointer/X86_Pointer typedefs, and rebinds existing SMNADDR/X86PADDR/PSPPHYSADDR plain typedefs into PointerTypedefs. Validated on Ryzen_Zen2_ver_0d15 (X86PADDR, 4 listing instances preserved) and Ryzen_Zen2_ver_0d1a (X86PADDR + SMNADDR, 6 + 0 instances). Idempotent on re-run. Category preservation via per-hit setCategoryPath before resolve.",
+  "created_at": "2026-05-06T18:26:24.749615068Z",
+  "kind": "handoff",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAeVOyjlSovT8V2XZnamP6Mka7tJxc1bLYDSG+X/uzujaPRKNQkC6pHHCFOkTDZTXMKc4ueLZQdoSF2kyzOPMHDQ=="
+}
