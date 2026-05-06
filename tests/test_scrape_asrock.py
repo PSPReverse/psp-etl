@@ -16,7 +16,6 @@ from psp_etl.scrape.asrock import (
 )
 from psp_etl.scrape.base import BiosUpdate, BoardInfo
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

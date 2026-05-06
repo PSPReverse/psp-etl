@@ -14,8 +14,7 @@ from psp_etl.scrape.asus import (
     _extract_agesa,
     _strip_html,
 )
-from psp_etl.scrape.base import BoardInfo, BiosUpdate
-
+from psp_etl.scrape.base import BiosUpdate, BoardInfo
 
 # ---------------------------------------------------------------------------
 # Helper functions

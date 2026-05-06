@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - cli: psp-etl ingest missing --vendor and --model options
 
 ### Changed
+- Drop SQLite migration paths; assume fresh DB (L1)
+- Don't mark X86_DRAM (and similar DRAM-backed x86 regions) as volatile (#76)
 - Model SMN/x86 as Ghidra address spaces with resolvable pointer typedefs (#74)
 - Drop version from select group key; add get_best_folders, get_entries_for_folder
 - Nix: drop setuptools-scm, use nix-gitignore, add dev shell hook

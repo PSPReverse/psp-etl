@@ -8,7 +8,6 @@ from click.testing import CliRunner
 from psp_etl.cli import cli
 from psp_etl.db import Database, Entry, Image, PrimaryImage, StringAnalysis
 
-
 _WIDE = {"COLUMNS": "200"}  # prevent Rich from wrapping table cells
 
 

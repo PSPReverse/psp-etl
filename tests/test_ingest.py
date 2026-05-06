@@ -15,7 +15,6 @@ from psp_etl.ingest import (
     ingest_rom,
 )
 
-
 # ---------------------------------------------------------------------------
 # _normalize_zen_generation
 # ---------------------------------------------------------------------------
@@ -80,7 +79,7 @@ def _make_fake_file(
     readable_type: str = "PSP_FW_BOOT_LOADER~0x1",
     readable_version: str = "1.0.0",
     md5_hex: str | None = None,
-    has_decrypted_method: bool = True,  # noqa: ARG001
+    has_decrypted_method: bool = True,
 ):
     """Return a mock PSPTool File-like object."""
     f = MagicMock()

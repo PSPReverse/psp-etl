@@ -553,7 +553,7 @@ def test_get_unanalyzed_entries(db):
 
 
 def test_get_best_entries(db):
-    img1, img2, e1, e2, e3 = _populate(db)
+    img1, _img2, e1, _e2, _e3 = _populate(db)
     db.upsert_primary_image(
         PrimaryImage(zen_generation="zen2", type_id=1, version="1.0", best_entry_id=e1, best_image_id=img1, score=20.0)
     )
@@ -563,7 +563,7 @@ def test_get_best_entries(db):
 
 
 def test_get_best_entries_filter_by_gen(db):
-    img1, img2, e1, e2, e3 = _populate(db)
+    img1, _img2, e1, _e2, e3 = _populate(db)
     db.upsert_primary_image(
         PrimaryImage(zen_generation="zen2", type_id=1, version="1.0", best_entry_id=e1, best_image_id=img1, score=20.0)
     )

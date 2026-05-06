@@ -11,7 +11,6 @@ from click.testing import CliRunner
 from psp_etl.cli import cli
 from psp_etl.db import Database
 
-
 # ---------------------------------------------------------------------------
 # Helpers: fake PSPTool objects
 # ---------------------------------------------------------------------------
@@ -116,7 +115,7 @@ def test_ingest_duplicate_is_idempotent(runner, data_dir, tmp_path):
     with patch("psp_etl.ingest.PSPTool.from_file", return_value=_make_fake_psp()):
         result1 = runner.invoke(cli, ["--data-dir", str(data_dir), "ingest", str(rom_path)])
     # Second ingest: PSPTool should NOT be called — the ROM is skipped
-    with patch("psp_etl.ingest.PSPTool.from_file", side_effect=AssertionError("should not re-parse")) as mock_psp:
+    with patch("psp_etl.ingest.PSPTool.from_file", side_effect=AssertionError("should not re-parse")):
         result2 = runner.invoke(cli, ["--data-dir", str(data_dir), "ingest", str(rom_path)])
 
     assert result1.exit_code == 0, result1.output
