@@ -103,7 +103,7 @@ Note: Gigabyte's main site is behind Akamai Bot Manager. The scraper sends a Chr
 
 ```
 psp-etl/
-├── AGENTS.md                  # Conventions for humans + coding agents
+├── AGENTS.md                  # Project conventions (style, layout, build)
 ├── LICENSE                    # GPL-3.0-only
 ├── default.nix
 ├── pyproject.toml
