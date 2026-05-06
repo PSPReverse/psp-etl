@@ -6,7 +6,6 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Dataclasses
 # ---------------------------------------------------------------------------
@@ -85,38 +84,6 @@ class PrimaryImage:
 # ---------------------------------------------------------------------------
 # Schema
 # ---------------------------------------------------------------------------
-
-# Migration: replaces the inline UNIQUE constraint on entries with an
-# expression-based index that uses COALESCE so that NULL zen_generation values
-# are treated as equal (SQLite normally considers NULL != NULL in UNIQUE
-# constraints, which would allow duplicate "unknown-generation" entries).
-_MIGRATE_ENTRIES_UNIQUE = """
-BEGIN;
-CREATE TABLE entries_new (
-    id INTEGER PRIMARY KEY,
-    image_id INTEGER REFERENCES images(id),
-    rom_index INTEGER DEFAULT 0,
-    directory_index INTEGER,
-    directory_magic TEXT,
-    zen_generation TEXT,
-    type_id INTEGER NOT NULL,
-    type_name TEXT,
-    subprogram INTEGER DEFAULT 0,
-    instance INTEGER DEFAULT 0,
-    version TEXT,
-    firmware_md5 TEXT,
-    blob_sha256 TEXT,
-    body_size INTEGER,
-    encrypted BOOLEAN DEFAULT FALSE,
-    compressed BOOLEAN DEFAULT FALSE,
-    signed BOOLEAN DEFAULT FALSE,
-    load_address INTEGER
-);
-INSERT OR IGNORE INTO entries_new SELECT * FROM entries;
-DROP TABLE entries;
-ALTER TABLE entries_new RENAME TO entries;
-COMMIT;
-"""
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS images (
@@ -236,46 +203,15 @@ class Database:
     def close(self) -> None:
         self._conn.close()
 
-    def __enter__(self) -> "Database":
+    def __enter__(self) -> Database:
         return self
 
     def __exit__(self, *_) -> None:
         self.close()
 
     def _init_schema(self) -> None:
-        self._maybe_migrate_entries_constraint()
         self._conn.executescript(_SCHEMA)
         self._conn.commit()
-
-    def _maybe_migrate_entries_constraint(self) -> None:
-        """Migrate entries to drop the inline UNIQUE and switch to idx_entries_unique.
-
-        Old databases had ``UNIQUE(image_id, rom_index, directory_index,
-        type_id, subprogram, instance)`` inline in the CREATE TABLE.  This
-        causes duplicate rows when zen_generation is NULL because SQLite treats
-        each NULL as distinct.  The replacement is an expression-based unique
-        index using COALESCE to normalise NULLs.
-        """
-        # If the expression-based index already exists, we're done.
-        idx = self._conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_entries_unique'"
-        ).fetchone()
-        if idx is not None:
-            return
-        # If entries table doesn't exist yet, _init_schema will create it fresh.
-        table = self._conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='entries'").fetchone()
-        if table is None:
-            return
-        # Old table exists without the expression index — recreate it.
-        # Disable FK checks for the duration: we're only copying rows, not
-        # breaking referential integrity, but SQLite's immediate FK checking
-        # would reject the DROP TABLE while child tables (string_analysis,
-        # primary_images) still reference it.
-        self._conn.execute("PRAGMA foreign_keys=OFF")
-        try:
-            self._conn.executescript(_MIGRATE_ENTRIES_UNIQUE)
-        finally:
-            self._conn.execute("PRAGMA foreign_keys=ON")
 
     # ------------------------------------------------------------------
     # Insert methods

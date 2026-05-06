@@ -12,7 +12,7 @@ import shutil
 import sqlite3
 import statistics
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from itertools import groupby
 from pathlib import Path
 
@@ -108,7 +108,7 @@ def ingest(ctx: click.Context, roms: tuple[Path, ...], vendor: str, model: str |
                         vendor=vendor,
                         model=model,
                         file_size=len(rom_bytes),
-                        download_date=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                        download_date=datetime.now(UTC).isoformat(timespec="seconds"),
                     )
                 )
                 console.print(f"[green]NEW[/green]    {rom_path.name} ({sha256[:12]}…)")
@@ -228,11 +228,11 @@ def query(
     if type_id is not None:
         try:
             parsed_type_id = int(type_id, 16)
-        except ValueError:
+        except ValueError as exc:
             raise click.BadParameter(
                 f"expected a hex integer (e.g. 0x08), got {type_id!r}",
                 param_hint="'--type'",
-            )
+            ) from exc
 
     with Database(db_path) as db:
         rows = db.query_entries(
@@ -304,9 +304,17 @@ _QUERY_FORMATTERS = {
 
 
 @cli.command()
-@click.option("--gen", type=click.Choice(["zen1", "zen2", "zen3", "zen4", "zen5"]), help="Filter by Zen generation.")
 @click.option(
-    "--type", "type_id", type=str, default=None, help="Filter by hex type_id (e.g. 0x01). Ignored with --folder."
+    "--gen",
+    type=click.Choice(["zen1", "zen2", "zen3", "zen4", "zen5"]),
+    help="Filter by Zen generation.",
+)
+@click.option(
+    "--type",
+    "type_id",
+    type=str,
+    default=None,
+    help="Filter by hex type_id (e.g. 0x01). Ignored with --folder.",
 )
 @click.option(
     "--folder",
@@ -314,13 +322,27 @@ _QUERY_FORMATTERS = {
     default=False,
     help="Show best folder (image+directory) per generation instead of per type.",
 )
-@click.option("--format", "fmt", type=click.Choice(["table", "json"]), default="table", help="Output format.")
 @click.option(
-    "--export-dir", type=click.Path(file_okay=False, path_type=Path), default=None, help="Copy best blobs here."
+    "--format",
+    "fmt",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format.",
+)
+@click.option(
+    "--export-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="Copy best blobs here.",
 )
 @click.pass_context
 def best(
-    ctx: click.Context, gen: str | None, type_id: str | None, folder: bool, fmt: str, export_dir: Path | None
+    ctx: click.Context,
+    gen: str | None,
+    type_id: str | None,
+    folder: bool,
+    fmt: str,
+    export_dir: Path | None,
 ) -> None:
     """Show best (highest-scoring) PSP firmware blobs."""
     data_dir: Path = ctx.obj["data_dir"]
@@ -403,9 +425,8 @@ def best(
                         if not src.exists():
                             skipped += 1
                             continue
-                        type_name = (
-                            (entry["type_name"] or f"type_{entry['type_id']:02x}").replace("/", "_").replace(" ", "_")
-                        )
+                        raw_name = entry["type_name"] or f"type_{entry['type_id']:02x}"
+                        type_name = raw_name.replace("/", "_").replace(" ", "_")
                         dest = export_dir / f"{row['zen_generation']}_{type_name}.bin"
                         shutil.copy2(src, dest)
                         console.print(f"  [dim]{dest.name}[/dim]")
@@ -419,11 +440,11 @@ def best(
     if type_id is not None:
         try:
             parsed_type_id = int(type_id, 16)
-        except ValueError:
+        except ValueError as exc:
             raise click.BadParameter(
                 f"expected a hex integer (e.g. 0x01), got {type_id!r}",
                 param_hint="'--type'",
-            )
+            ) from exc
 
     with Database(db_path) as db:
         rows = db.get_best_entries(zen_generation=gen, type_id=parsed_type_id)
@@ -504,26 +525,24 @@ _VENDOR_SCRAPERS: dict[str, type] = {}
 
 
 def _load_scrapers() -> None:
-    import contextlib
+    """Import all vendor scrapers eagerly.
 
+    All four scrapers' dependencies are listed in ``pyproject.toml`` and are
+    expected to be present.  An ImportError here means the install is broken,
+    so we surface it loudly instead of silently dropping a vendor from
+    ``--help`` and ``scrape <vendor>`` choices.
+    """
     if _VENDOR_SCRAPERS:
         return
-    with contextlib.suppress(ImportError):
-        from psp_etl.scrape.asrock import AsRockScraper
+    from psp_etl.scrape.asrock import AsRockScraper
+    from psp_etl.scrape.asus import AsusScraper
+    from psp_etl.scrape.gigabyte import GigabyteScraper
+    from psp_etl.scrape.msi import MsiScraper
 
-        _VENDOR_SCRAPERS["asrock"] = AsRockScraper
-    with contextlib.suppress(ImportError):
-        from psp_etl.scrape.gigabyte import GigabyteScraper
-
-        _VENDOR_SCRAPERS["gigabyte"] = GigabyteScraper
-    with contextlib.suppress(ImportError):
-        from psp_etl.scrape.asus import AsusScraper
-
-        _VENDOR_SCRAPERS["asus"] = AsusScraper
-    with contextlib.suppress(ImportError):
-        from psp_etl.scrape.msi import MsiScraper
-
-        _VENDOR_SCRAPERS["msi"] = MsiScraper
+    _VENDOR_SCRAPERS["asrock"] = AsRockScraper
+    _VENDOR_SCRAPERS["asus"] = AsusScraper
+    _VENDOR_SCRAPERS["gigabyte"] = GigabyteScraper
+    _VENDOR_SCRAPERS["msi"] = MsiScraper
 
 
 @cli.command()
@@ -618,7 +637,7 @@ async def _scrape_async(
                                     agesa_version=update.agesa_version,
                                     download_url=update.download_url,
                                     file_size=len(rom_bytes),
-                                    download_date=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                                    download_date=datetime.now(UTC).isoformat(timespec="seconds"),
                                 )
                             )
                             console.print(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 import traceback
 from pathlib import Path
@@ -10,6 +11,8 @@ from pathlib import Path
 from psptool import PSPTool
 
 from .db import Database, Entry, ParseError
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +135,7 @@ def ingest_rom(
     # --- Parse the ROM with PSPTool ----------------------------------------
     try:
         psp = PSPTool.from_file(str(rom_path))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — PSPTool's exception surface is undocumented; record and continue
         db.insert_parse_error(
             ParseError(
                 image_id=image_id,
@@ -171,19 +174,48 @@ def ingest_rom(
 
 def _ingest_file(*, f, rom_idx, dir_idx, directory, rom, image_id, db, blobs_dir):
     """Extract one PSP firmware file and persist it."""
-    # --- Extract body bytes --------------------------------------------------
-    try:
-        if hasattr(f, "get_decrypted_decompressed_body"):
+    # PSPTool raises a wide and undocumented set of exceptions when a file is
+    # malformed (struct unpack errors, key derivation errors, decompression
+    # errors, …). We try the rich path first, then fall back to raw bytes,
+    # and finally skip — but every fall-through is logged so a corrupted
+    # entry never disappears silently.
+    type_id = getattr(f, "type", "?")
+    body: bytes | None = None
+    if hasattr(f, "get_decrypted_decompressed_body"):
+        try:
             body = f.get_decrypted_decompressed_body()
-        else:
-            body = bytes(f.get_bytes())
-    except Exception:
+        except Exception as exc:  # noqa: BLE001 — PSPTool's exception surface is undocumented
+            logger.warning(
+                "image_id=%s rom=%d dir=%d type=%s: get_decrypted_decompressed_body failed (%s); "
+                "falling back to raw bytes",
+                image_id,
+                rom_idx,
+                dir_idx,
+                type_id,
+                exc,
+            )
+    if body is None:
         try:
             body = bytes(f.get_bytes())
-        except Exception:
-            return  # Can't get any bytes; skip silently
+        except Exception as exc:  # noqa: BLE001 — PSPTool's exception surface is undocumented
+            logger.error(
+                "image_id=%s rom=%d dir=%d type=%s: get_bytes also failed (%s); skipping entry",
+                image_id,
+                rom_idx,
+                dir_idx,
+                type_id,
+                exc,
+            )
+            return
 
     if not body:
+        logger.debug(
+            "image_id=%s rom=%d dir=%d type=%s: empty body, skipping",
+            image_id,
+            rom_idx,
+            dir_idx,
+            type_id,
+        )
         return
 
     # --- Content-address the blob --------------------------------------------

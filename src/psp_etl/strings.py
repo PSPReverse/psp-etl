@@ -7,10 +7,12 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+# Minimum length of a printable-ASCII run that we treat as a "string".
+# Embedded in STRING_PATTERN below — change both together.
 MIN_STRING_LENGTH = 6
 
-# Match printable ASCII runs of at least MIN_STRING_LENGTH characters
-STRING_PATTERN = re.compile(rb"[\x20-\x7e]{%d,}" % MIN_STRING_LENGTH)
+# Match printable ASCII runs of at least 6 characters.
+STRING_PATTERN = re.compile(rb"[\x20-\x7e]{6,}")
 
 CATEGORIES: dict[str, re.Pattern[str]] = {
     "format_string": re.compile(r"%[0-9]*[sdxXpuiolcfFeEgG]"),
