@@ -1,0 +1,10 @@
+{
+  "uuid": "32c8959a-1249-4927-9670-9bdf0172ef5b",
+  "issue_uuid": "1b493262-3d67-423e-b318-f9672ed197af",
+  "author": "driver",
+  "content": "Additional use cases that fall out of this same table — captured here so we don't fork a new issue:\n\n- Group view across (zen_generation, socket→Ryzen/EPYC platform, type_id) joining blob_strings against entries+images. Aggregate sources per cell: list of (image_id, vendor, model, bios_version, blob_sha256).\n- Superset / orphan / maximum-element relationships within a cell are pure SQL — no new module needed.\n- Format-string-only specialisation (string_type='format'): same queries with an extra WHERE. Format strings are the highest-signal markers for debug-build vs release because they're compiler-generated.\n- Useful CLI surface once the table exists: `psp-etl strings compare --gen zen5 --type 0x02 [--format-strings-only] [--explain BLOB]`.\n- Ryzen/EPYC distinction: today images.socket only sees AM4/AM5 (consumer); EPYC SP3/SP5 isn't scraped yet. The analysis works on whatever images exist; extending the corpus to EPYC is orthogonal.",
+  "created_at": "2026-05-06T21:16:25.067515311Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAtgspDKA4kVd7BEcbg73nBCzNFwvxR0CmdPRWIAgeKtHbQlrWLggB4qoj/BmsC4UsZ+1XgUcm+hO2NKS2zZEaDw=="
+}
