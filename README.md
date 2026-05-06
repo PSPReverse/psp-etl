@@ -81,6 +81,7 @@ psp-etl select                   # Recompute primary image selections
 
 psp-etl query                    # Query the database
     --gen zen1|zen2|zen3|zen4|zen5
+    --board-class Ryzen|EPYC|Threadripper|ThreadripperPro|Embedded
     --type <hex_type_id>
     --vendor <name>
     --min-score <float>
@@ -90,6 +91,7 @@ psp-etl query                    # Query the database
 
 psp-etl best                     # Show best (highest-scoring) images
     --gen zen1|zen2|zen3|zen4|zen5
+    --board-class Ryzen|EPYC|Threadripper|ThreadripperPro|Embedded
     --type <hex_type_id>
     --folder
     --export-dir <path>
@@ -125,6 +127,11 @@ Note: Gigabyte's main site is behind Akamai Bot Manager. The scraper sends a Chr
 - **`data/` directories grow large.** A full multi-vendor scrape is on
   the order of 20–40 GB of ROMs and extracted blobs. Plan storage
   accordingly; nothing under `data/` is committed to git.
+- **No schema migrations.** `data/psp-etl.db` is treated as fully
+  rebuildable from `data/roms/{sha256}.rom`. When the schema changes
+  (e.g. adding `images.board_class` in issue #77), delete the DB and
+  re-run `psp-etl ingest && psp-etl analyze && psp-etl select`. ROMs
+  do not need to be re-fetched — they are content-addressed on disk.
 
 ## Project structure
 

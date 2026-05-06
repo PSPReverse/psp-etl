@@ -187,7 +187,7 @@ def test_query_json_no_hashes(runner, data_dir):
     result = runner.invoke(cli, ["--data-dir", str(data_dir), "query", "--format", "json"])
     assert result.exit_code == 0
     records = json.loads(result.output)
-    expected = {"type_name", "version", "zen_generation", "vendor", "model", "score"}
+    expected = {"type_name", "version", "zen_generation", "board_class", "vendor", "model", "score"}
     assert set(records[0].keys()) == expected
 
 
@@ -238,7 +238,15 @@ def test_query_csv_exact_columns(runner, data_dir):
     reader = csv.DictReader(io.StringIO(result.output))
     rows = list(reader)
     assert len(rows) > 0
-    assert reader.fieldnames == ["type_name", "version", "zen_generation", "vendor", "model", "score"]
+    assert reader.fieldnames == [
+        "type_name",
+        "version",
+        "zen_generation",
+        "board_class",
+        "vendor",
+        "model",
+        "score",
+    ]
 
 
 def test_query_empty_db(runner, tmp_path):
@@ -249,3 +257,35 @@ def test_query_empty_db(runner, tmp_path):
     result = runner.invoke(cli, ["--data-dir", str(d), "query"])
     assert result.exit_code == 0
     assert "No entries found" in result.output
+
+
+def test_query_filter_by_board_class(runner, tmp_path):
+    """--board-class filters images by their board_class column."""
+    d = tmp_path / "data"
+    d.mkdir()
+    with Database(d / "psp-etl.db") as db:
+        ryz = db.insert_image(Image(sha256="r1", vendor="ASUS", socket="AM5", board_class="Ryzen"))
+        epy = db.insert_image(Image(sha256="e1", vendor="ASUS", socket="SP5", board_class="EPYC"))
+        db.insert_entry(Entry(image_id=ryz, type_id=1, zen_generation="zen4", version="1.0"))
+        db.insert_entry(Entry(image_id=epy, type_id=1, zen_generation="zen4", version="1.0"))
+
+    result = runner.invoke(cli, ["--data-dir", str(d), "query", "--board-class", "EPYC", "--format", "json"])
+    assert result.exit_code == 0
+    records = json.loads(result.output)
+    assert len(records) == 1
+    assert records[0]["board_class"] == "EPYC"
+
+
+def test_query_board_class_case_insensitive(runner, tmp_path):
+    """--board-class accepts case-insensitive input (Click choice normalises)."""
+    d = tmp_path / "data"
+    d.mkdir()
+    with Database(d / "psp-etl.db") as db:
+        epy = db.insert_image(Image(sha256="e1", vendor="ASUS", socket="SP5", board_class="EPYC"))
+        db.insert_entry(Entry(image_id=epy, type_id=1, zen_generation="zen4", version="1.0"))
+
+    for variant in ("EPYC", "epyc", "Epyc"):
+        result = runner.invoke(cli, ["--data-dir", str(d), "query", "--board-class", variant, "--format", "json"])
+        assert result.exit_code == 0, f"variant {variant!r} failed: {result.output}"
+        records = json.loads(result.output)
+        assert len(records) == 1, f"variant {variant!r} returned {len(records)} rows"

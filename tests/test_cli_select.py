@@ -313,6 +313,79 @@ def test_select_best_entry_id_is_higher_scoring_vendor(runner, data_dir):
     assert row["score"] == 75.0
 
 
+def test_select_partitions_by_board_class(runner, data_dir):
+    """Same (zen_generation, type_id) under Ryzen vs EPYC must produce 2 primary_images."""
+    with Database(data_dir / "psp-etl.db") as db:
+        img_ryz = db.insert_image(Image(sha256="ryz1", vendor="ASUS", socket="AM5", board_class="Ryzen"))
+        img_epy = db.insert_image(Image(sha256="epy1", vendor="ASUS", socket="SP5", board_class="EPYC"))
+
+        e_ryz = db.insert_entry(
+            Entry(
+                image_id=img_ryz,
+                type_id=7,
+                zen_generation="zen4",
+                version="1.0.0",
+                firmware_md5="md5_ryz",
+                rom_index=0,
+                directory_index=0,
+                subprogram=0,
+                instance=0,
+            )
+        )
+        e_epy = db.insert_entry(
+            Entry(
+                image_id=img_epy,
+                type_id=7,
+                zen_generation="zen4",
+                version="1.0.0",
+                firmware_md5="md5_epy",
+                rom_index=0,
+                directory_index=0,
+                subprogram=0,
+                instance=0,
+            )
+        )
+        db.insert_string_analysis(
+            StringAnalysis(
+                entry_id=e_ryz,
+                total_strings=50,
+                unique_strings=40,
+                format_strings=5,
+                function_names=2,
+                error_messages=1,
+                postcode_strings=0,
+                descriptive_strings=8,
+                score=20.0,
+            )
+        )
+        db.insert_string_analysis(
+            StringAnalysis(
+                entry_id=e_epy,
+                total_strings=30,
+                unique_strings=25,
+                format_strings=2,
+                function_names=1,
+                error_messages=0,
+                postcode_strings=0,
+                descriptive_strings=4,
+                score=12.0,
+            )
+        )
+
+    result = runner.invoke(cli, ["--data-dir", str(data_dir), "select"])
+    assert result.exit_code == 0
+
+    with Database(data_dir / "psp-etl.db") as db:
+        rows = db._conn.execute(
+            "SELECT board_class, score FROM primary_images "
+            "WHERE zen_generation='zen4' AND type_id=7 ORDER BY board_class"
+        ).fetchall()
+
+    assert len(rows) == 2
+    boards = {r["board_class"] for r in rows}
+    assert boards == {"Ryzen", "EPYC"}
+
+
 def test_select_skips_null_zen_generation(runner, data_dir):
     """Entries with NULL zen_generation must be excluded from select.
     Entries with NULL version are now included (version is not a selection key)."""
