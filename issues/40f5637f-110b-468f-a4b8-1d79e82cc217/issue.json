@@ -1,0 +1,11 @@
+{
+  "uuid": "40f5637f-110b-468f-a4b8-1d79e82cc217",
+  "display_id": null,
+  "title": "Feed X86 mapping-slot knowledge into Ghidra analysis to generate X86-space xrefs",
+  "description": "Once we model the X86 address space and know which PSP functions/IOCTLs install x86 mappings (PSPX86MAPSLOT, TOS_X86_MAPPING_INFO, SVC_0x6B_ARG_CREATE_X86_MAPPING_MAYBE), we can drive Ghidra to add cross-references in the X86 space. Concretely: when a function call creates a mapping with a known x86 PADDR argument, emit a reference from the call site to that X86::address. Outcome: alt-clicking the X86PADDR value at the call site lands on the right SAM_*/X86_DRAM block, and the X86 space accumulates xref evidence that helps drive recovery of which x86 regions a given firmware actually touches.",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-05-06T18:50:50.539693411Z",
+  "updated_at": "2026-05-06T18:50:50.539693411Z"
+}
