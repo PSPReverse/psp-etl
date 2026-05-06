@@ -6,7 +6,20 @@ build-backend = "setuptools.build_meta"
 name = "psp-etl"
 version = "0.1.0"
 description = "AMD PSP Firmware Extraction, Transformation & Loading Pipeline"
+readme = "README.md"
+license = { text = "GPL-3.0-only" }
 requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Disassemblers",
+]
 dependencies = [
     "psptool>=3.4",
     "click>=8.0",
@@ -14,6 +27,11 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "rich>=13.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/PSPReverse/psp-etl"
+Repository = "https://github.com/PSPReverse/psp-etl"
+Issues = "https://github.com/PSPReverse/psp-etl/issues"
 
 [project.scripts]
 psp-etl = "psp_etl.cli:cli"
@@ -26,3 +44,33 @@ dev = ["pytest>=9.0", "ruff>=0.4"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # pyflakes
+    "W",     # pycodestyle warnings
+    "I",     # isort
+    "B",     # flake8-bugbear
+    "BLE",   # flake8-blind-except: forbid bare `except:` and `except Exception:` without a specific reason
+    "UP",    # pyupgrade
+    "RUF",   # Ruff-specific
+]
+ignore = [
+    # Em-dashes / Unicode quotes are a deliberate stylistic choice in user-facing
+    # strings, comments, and docstrings. We don't want ruff to flag them.
+    "RUF001",  # ambiguous-unicode-character-string
+    "RUF002",  # ambiguous-unicode-character-docstring
+    "RUF003",  # ambiguous-unicode-character-comment
+]
+# BLE001 = "Do not catch blind exception: `Exception`"
+# We accept narrow targeted exceptions only; if an `except Exception:` is necessary
+# (e.g. wrapping a third-party library call that has no documented exception type),
+# add `# noqa: BLE001` *with a reason* on that line.
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["BLE001", "E501"]
