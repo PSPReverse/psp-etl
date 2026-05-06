@@ -1,0 +1,11 @@
+{
+  "uuid": "1bdec41f-ebb5-4724-898f-3c4987bb10a1",
+  "display_id": null,
+  "title": "Survey other AMD BIOS scrapers and compare access strategies",
+  "description": "Question: \n\nContext: \n\nFindings: \n\nBefore publishing, do a literature/ecosystem search for other AMD BIOS firmware scrapers (e.g. coreboot blob downloaders, vendor-firmware aggregators, prior research projects). For each, capture: which vendors they cover, how they access the CDN (direct, Wayback CDX, Selenium/Playwright, signed download URLs, session cookies, etc.), what unwrapping they do, and whether they handle bot-detection.  Outcome: a short comparison table in README or a docs/ page. May also surface better techniques than our current Akamai-bypass User-Agent in gigabyte.py.",
+  "status": "open",
+  "priority": "low",
+  "created_by": "driver",
+  "created_at": "2026-05-06T19:58:15.395104767Z",
+  "updated_at": "2026-05-06T19:58:15.395104767Z"
+}
