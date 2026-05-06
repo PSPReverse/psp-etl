@@ -23,8 +23,20 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn
 from rich.table import Table
 
 from psp_etl.db import Database, Image, PrimaryImage, StringAnalysis
+from psp_etl.scrape.asrock import AsRockScraper
+from psp_etl.scrape.asus import AsusScraper
+from psp_etl.scrape.base import VendorScraper
+from psp_etl.scrape.gigabyte import GigabyteScraper
+from psp_etl.scrape.msi import MsiScraper
 
 logger = logging.getLogger(__name__)
+
+_VENDOR_SCRAPERS: dict[str, type[VendorScraper]] = {
+    "asrock": AsRockScraper,
+    "asus": AsusScraper,
+    "gigabyte": GigabyteScraper,
+    "msi": MsiScraper,
+}
 
 _DEFAULT_DATA_DIR = Path("data")
 
@@ -521,29 +533,6 @@ def best(
 # scrape
 # ---------------------------------------------------------------------------
 
-_VENDOR_SCRAPERS: dict[str, type] = {}
-
-
-def _load_scrapers() -> None:
-    """Import all vendor scrapers eagerly.
-
-    All four scrapers' dependencies are listed in ``pyproject.toml`` and are
-    expected to be present.  An ImportError here means the install is broken,
-    so we surface it loudly instead of silently dropping a vendor from
-    ``--help`` and ``scrape <vendor>`` choices.
-    """
-    if _VENDOR_SCRAPERS:
-        return
-    from psp_etl.scrape.asrock import AsRockScraper
-    from psp_etl.scrape.asus import AsusScraper
-    from psp_etl.scrape.gigabyte import GigabyteScraper
-    from psp_etl.scrape.msi import MsiScraper
-
-    _VENDOR_SCRAPERS["asrock"] = AsRockScraper
-    _VENDOR_SCRAPERS["asus"] = AsusScraper
-    _VENDOR_SCRAPERS["gigabyte"] = GigabyteScraper
-    _VENDOR_SCRAPERS["msi"] = MsiScraper
-
 
 @cli.command()
 @click.argument("vendor", type=click.Choice(["asrock", "gigabyte", "asus", "msi", "all"]))
@@ -553,12 +542,7 @@ def _load_scrapers() -> None:
 @click.pass_context
 def scrape(ctx: click.Context, vendor: str, socket: str, limit: int | None, dry_run: bool) -> None:
     """Scrape and download BIOS updates from vendor websites."""
-    _load_scrapers()
-
     vendors_to_run = list(_VENDOR_SCRAPERS.keys()) if vendor == "all" else [vendor]
-    for v in vendors_to_run:
-        if v not in _VENDOR_SCRAPERS:
-            raise click.ClickException(f"No scraper for '{v}'. Available: {', '.join(_VENDOR_SCRAPERS) or 'none'}")
 
     data_dir: Path = ctx.obj["data_dir"]
     db_path = data_dir / "psp-etl.db"
