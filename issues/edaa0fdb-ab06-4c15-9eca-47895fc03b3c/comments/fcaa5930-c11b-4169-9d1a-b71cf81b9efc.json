@@ -1,0 +1,10 @@
+{
+  "uuid": "fcaa5930-c11b-4169-9d1a-b71cf81b9efc",
+  "issue_uuid": "edaa0fdb-ab06-4c15-9eca-47895fc03b3c",
+  "author": "driver",
+  "content": "Done as part of the opensource cleanup batch (this session). Removed _MIGRATE_ENTRIES_UNIQUE and _maybe_migrate_entries_constraint from db.py; fresh-DB CREATE statements only. All 344 tests pass.",
+  "created_at": "2026-05-06T20:10:57.617750946Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAn9HvTnL4RH6DPRpS+nXkXvJ35iFWPFSrUJYOqoPr3aJb2uOl1IYQfealavcQOzW/JFmtqYLrzFXvF380L0EKCg=="
+}
