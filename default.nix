@@ -74,6 +74,7 @@ in
       uv
       ruff
       npins
+      actionlint
     ];
     shellHook = ''
       if [ -e "$PWD/result/bin/psp-etl" ]; then
