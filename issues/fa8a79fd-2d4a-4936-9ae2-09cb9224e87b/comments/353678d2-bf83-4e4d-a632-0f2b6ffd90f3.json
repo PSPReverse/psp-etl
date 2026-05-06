@@ -1,0 +1,10 @@
+{
+  "uuid": "353678d2-bf83-4e4d-a632-0f2b6ffd90f3",
+  "issue_uuid": "fa8a79fd-2d4a-4936-9ae2-09cb9224e87b",
+  "author": "driver",
+  "content": "Implemented: added isVolatile field to X86Region, X86_DRAM=false (decompiler-cacheable), MMIO + all SAM_* = true. applyBlockAttrs now runs on every region every invocation so re-runs repair previously-applied programs.\n\nVerified on Ryzen_Zen2_ver_0d15 and Ryzen_Zen2_ver_0d1a (both already had X86 blocks from the prior session): re-running ApplyPspAddressSpaces.java flipped X86_DRAM volatile=true -> false while leaving X86_MMIO + 4 SAM_* blocks volatile=true. Script remains idempotent.\n\nPre-existing BadDataType IllegalAccessException ERRORs on 0d1a are unrelated (also surfaced in #74 validation runs).",
+  "created_at": "2026-05-06T19:20:23.221826045Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAo8aT+tQq1kWwvZhxeb8ATjYP58fk1HzEmm2HgQbxSVuE5RClsv14oUEOuX6l13zuJO0AwYpl0sBaXtbs5knEBQ=="
+}
