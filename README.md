@@ -1,5 +1,16 @@
 # psp-etl
 
+> [!WARNING]
+> **No human has reviewed this implementation end-to-end.**
+> Like all GPL-3.0 software, `psp-etl` ships with no warranty and no fitness
+> for any particular purpose (see [`LICENSE`](LICENSE)). On top of that
+> baseline, you should treat this repo as *less* trustworthy than most:
+> the code was written by an AI agent under loose human supervision and
+> has not been audited line-by-line. The outputs look reasonable on the
+> test corpus, but assume any claim from this tool needs independent
+> verification before you build on it. Bug reports — including
+> "this whole module is wrong" — are welcome.
+
 AMD PSP firmware extraction, transformation, and loading pipeline. Scrapes motherboard vendor websites for BIOS update packages, extracts PSP firmware entries using [PSPTool](https://github.com/PSPReverse/PSPTool), analyzes debug string richness across vendor builds, and identifies which vendor build contains the most debug symbols for each firmware version.
 
 The repository also ships a library of Ghidra scripts (`ghidra_scripts/`) for analysing the extracted blobs — see [`ghidra_scripts/README.md`](ghidra_scripts/README.md). The two halves share a corpus but are otherwise independent.
