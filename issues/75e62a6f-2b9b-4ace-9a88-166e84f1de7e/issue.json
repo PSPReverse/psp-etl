@@ -1,0 +1,10 @@
+{
+  "uuid": "75e62a6f-2b9b-4ace-9a88-166e84f1de7e",
+  "display_id": null,
+  "title": "Model SMN/x86 as Ghidra address spaces with resolvable pointer typedefs",
+  "status": "open",
+  "priority": "high",
+  "created_by": "driver",
+  "created_at": "2026-05-06T18:07:11.287984365Z",
+  "updated_at": "2026-05-06T18:07:11.287984365Z"
+}
