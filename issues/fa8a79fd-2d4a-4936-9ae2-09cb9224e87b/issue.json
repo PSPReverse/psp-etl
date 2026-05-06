@@ -1,6 +1,6 @@
 {
   "uuid": "fa8a79fd-2d4a-4936-9ae2-09cb9224e87b",
-  "display_id": null,
+  "display_id": 76,
   "title": "Don't mark X86_DRAM (and similar DRAM-backed x86 regions) as volatile",
   "description": "ApplyPspAddressSpaces.java currently sets volatile=true on every block in the X86 overlay (DRAM + MMIO + SAM). Volatile is correct for MMIO and SAM (POST status, UART, PCI cfg, USB PHY FW), but X86_DRAM is plain DRAM and should be non-volatile so the decompiler can treat repeated loads as cacheable/optimizable. Fix: per-region volatile flag, defaulting to true for MMIO/SAM and false for X86_DRAM.",
   "status": "open",
