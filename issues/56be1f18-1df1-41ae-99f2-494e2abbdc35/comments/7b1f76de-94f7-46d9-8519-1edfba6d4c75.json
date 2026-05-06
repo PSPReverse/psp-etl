@@ -1,0 +1,10 @@
+{
+  "uuid": "7b1f76de-94f7-46d9-8519-1edfba6d4c75",
+  "issue_uuid": "56be1f18-1df1-41ae-99f2-494e2abbdc35",
+  "author": "driver",
+  "content": "Implementation pushed to branch `issue-77-board-class` (commit d823e942).\n\nChanges per design doc `.design/separate-zen-from-board-class.md`:\n- `images.board_class TEXT` column derived from socket via `ingest.classify_board_class`\n- `primary_images` uniqueness widened to (zen_generation, board_class, type_id) via expression UNIQUE INDEX (NULL collates as '')\n- `--board-class` flag added to query/best/stats; export filename pattern is `{board_class}_{gen}_{type}.bin`\n- `select` group key triple: (zen_gen, board_class, type_id)\n- No migration: README + AGENTS.md document the rebuild-from-content-addressed-ROMs policy\n- 367 tests pass (16 new for board_class, including end-to-end zen4-Ryzen-vs-EPYC partition test)\n\nReady for critical review.",
+  "created_at": "2026-05-06T22:29:58.810817263Z",
+  "kind": "impl",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA3ZTgV6jIoclq4IN9LvJ8b6GYm5zCf+bi3w6zXlkEmVq7exe1q4La/+1eTVj47HN+P26VwPj8IvdK9U1HMzqkDg=="
+}
