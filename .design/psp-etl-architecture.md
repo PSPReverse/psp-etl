@@ -5,7 +5,7 @@
 
 ## Context
 
-PSP-ETL is a single-user research pipeline. DESIGN.md specifies the goal, schema, CLI, and vendor details. This ADR records decisions made during initial implementation that deviate from or extend DESIGN.md, plus resolved open questions.
+PSP-ETL is a research pipeline for collecting and analysing AMD PSP firmware. This ADR records the architecture decisions made during initial implementation, and resolves the open questions that came out of that design phase.
 
 ## Decisions
 
@@ -55,17 +55,16 @@ psptool is not in nixpkgs — packaged from PyPI using `format = "pyproject"` (i
 
 Blobs flagged `encrypted=False` by PSPTool that produce zero strings during analysis have Shannon entropy computed and stored in `string_analysis.entropy`. Entropy ~8.0 = likely encrypted (PSPTool mis-detection), ~6-7 = compressed, ~4-5 = plaintext. Enables filtering and debugging of PSPTool classification errors.
 
-## Resolved Questions (from DESIGN.md)
+## Resolved Questions
 
-**Q1 — Research directory**: `ln -s ../../research research/` at project root. This repo is expected to live inside `AMD-PSP/`. Standalone clones will have a broken symlink — acceptable for a single-user research tool. Document in `psp-etl.md`.
+**Q1 — Test strategy for ingest.py**: Mock PSPTool API objects (ROM, Directory, File) for unit tests so they run in CI without ROM files. Integration tests use real ROMs from `data/roms/` and are skipped via pytest marker when absent.
 
-**Q2 — Test strategy for ingest.py**: Mock PSPTool API objects (ROM, Directory, File) for unit tests so they run in CI without ROM files. Integration tests use real ROMs from `data/roms/` and are skipped via pytest marker when absent.
+**Q2 — PSPTool failures**: Skip and log to `parse_errors` table. Contribute fixes upstream if patterns emerge. No forking.
 
-**Q3 — PSPTool failures**: Skip and log to `parse_errors` table. Contribute fixes upstream if patterns emerge. No forking.
+**Q3 — MSI scraper**: Originally deferred under the assumption that downloads were session-based. Resolved by switching to the Wayback Machine CDX API to enumerate `download.msi.com/bos_exe/mb/*` URLs and identifying boards via HTTP Range requests on the first 8 KB of each ZIP. See `src/psp_etl/scrape/msi.py`.
 
 ## Out of Scope
 
-- MSI scraper (session-based downloads, may need browser automation — deferred)
 - UEFI capsule parsing beyond ASUS CAP headers
 - Web UI or API server
 - Firmware redistribution or hosting

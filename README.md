@@ -2,7 +2,7 @@
 
 AMD PSP firmware extraction, transformation, and loading pipeline. Scrapes motherboard vendor websites for BIOS update packages, extracts PSP firmware entries using [PSPTool](https://github.com/PSPReverse/PSPTool), analyzes debug string richness across vendor builds, and identifies which vendor build contains the most debug symbols for each firmware version.
 
-This tool lives inside the `AMD-PSP/` project directory and expects a `research/` symlink pointing to `../../research/`.
+The repository also ships a library of Ghidra scripts (`ghidra_scripts/`) for analysing the extracted blobs — see [`ghidra_scripts/README.md`](ghidra_scripts/README.md). The two halves share a corpus but are otherwise independent.
 
 ## Background
 
@@ -53,7 +53,7 @@ data/
 └── blobs/           # Extracted PSP firmware blobs ({sha256}.bin)
 ```
 
-### Planned commands
+### Commands
 
 ```
 psp-etl scrape <vendor|all>      # Scrape and download BIOS updates
@@ -80,27 +80,33 @@ psp-etl query                    # Query the database
 psp-etl best                     # Show best (highest-scoring) images
     --gen zen1|zen2|zen3|zen4|zen5
     --type <hex_type_id>
+    --folder
     --export-dir <path>
+    --format table|json
 
 psp-etl stats                    # Per-generation summary dashboard
+    --gen zen1|zen2|zen3|zen4|zen5
 ```
 
 ## Supported vendors
 
 | Vendor | Socket | Status |
 |--------|--------|--------|
-| ASRock | AM4, AM5 | Scraper implemented |
-| Gigabyte | AM4, AM5 | Scraper implemented |
-| ASUS | AM4, AM5 | Scraper in progress |
-| MSI | AM4, AM5 | Planned (session-based CDN, deferred) |
+| ASRock | AM4, AM5 | Implemented (Wayback CDX → CDN) |
+| ASUS | AM4, AM5 | Implemented (odinapi + support webapi) |
+| Gigabyte | AM4, AM5 | Implemented (HTML scrape — Akamai-protected, requires residential IP) |
+| MSI | AM4, AM5 | Implemented (Wayback CDX + range-request board ID) |
+
+Note: Gigabyte's main site is behind Akamai Bot Manager. The scraper sends a Chrome-like User-Agent and works from residential or office IPs; from datacenter IPs it will see HTTP 403. The CDN itself is unrestricted once download URLs are known.
 
 ## Project structure
 
 ```
 psp-etl/
+├── AGENTS.md                  # Conventions for humans + coding agents
+├── LICENSE                    # GPL-3.0-only
 ├── default.nix
 ├── pyproject.toml
-├── DESIGN.md                  # Full pipeline specification
 ├── .design/                   # Architecture decision records
 ├── ghidra_scripts/            # Ghidra headless/GUI scripts (see ghidra_scripts/README.md)
 │   ├── analysis/              #   Function renaming, MMIO annotation, string xref recovery
@@ -109,11 +115,12 @@ psp-etl/
 │   ├── setup/                 #   Memory maps, PSP types, entry point config
 │   ├── project/               #   Rename, reorganize, fix archives and links
 │   └── diagnostics/           #   Read-only inspection (list types, archives, links)
-├── data/
-│   ├── ghidra_archives/       # PSP data type archives (.gdt)
-│   ├── ghidra/                # Local Ghidra project (gitignored)
-│   ├── roms/                  # Downloaded BIOS ROMs (gitignored)
-│   └── blobs/                 # Extracted PSP firmware blobs (gitignored)
+├── data/                      # Runtime data, gitignored — never committed
+│   ├── psp-etl.db             #   SQLite database
+│   ├── roms/                  #   Downloaded BIOS ROMs ({sha256}.rom)
+│   ├── blobs/                 #   Extracted PSP firmware blobs ({sha256}.bin)
+│   ├── ghidra/                #   Local Ghidra project
+│   └── ghidra_archives/       #   PSP data type archives (.gdt)
 ├── src/psp_etl/
 │   ├── cli.py
 │   ├── db.py                  # SQLite schema and Database class
@@ -123,9 +130,15 @@ psp-etl/
 │       ├── base.py            # VendorScraper ABC
 │       ├── extract.py         # ZIP extraction, CAP header stripping
 │       ├── asrock.py
-│       └── gigabyte.py
+│       ├── asus.py
+│       ├── gigabyte.py
+│       └── msi.py
 └── tests/
 ```
+
+## License
+
+GPL-3.0-only. See [`LICENSE`](LICENSE).
 
 ## Dependencies
 

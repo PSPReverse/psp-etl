@@ -5,7 +5,7 @@
 //
 // Usage (GUI against SECT project):
 //   Run from Script Manager. Argument = output directory.
-//   Example: /home/vringar/projects/AMD-PSP/psp-etl/data/ghidra_archives
+//   Example: <repo>/data/ghidra_archives
 //
 // Usage (headless):
 //   analyzeHeadless <sect_project_dir> <sect_project_name> -noanalysis \
