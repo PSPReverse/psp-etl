@@ -3,11 +3,12 @@
   "display_id": null,
   "title": "Drop SQLite migration paths; assume fresh DB",
   "description": "Current state: \n\nDesired state: \n\nReason: \n\nDESIGN.md and ADR (.design/psp-etl-architecture.md) state the policy is 'on schema-version mismatch, drop and recreate the DB; everything is re-derivable from ROMs via ingest+analyze'. The current db.py keeps a defensive _MIGRATE_ENTRIES_UNIQUE migration that rebuilds the entries table from an old schema. For an opensource release we should drop all migrations and ship a clean CREATE TABLE schema. Tasks: remove _MIGRATE_ENTRIES_UNIQUE and _maybe_migrate_entries_constraint from src/psp_etl/db.py; consider whether to add a schema_version PRAGMA check that drops/recreates on mismatch, or just trust the schema. Update tests if any reference the migration path.",
-  "status": "open",
+  "status": "closed",
   "priority": "low",
   "created_by": "driver",
   "created_at": "2026-05-06T19:58:10.749928752Z",
-  "updated_at": "2026-05-06T19:58:10.823203083Z",
+  "updated_at": "2026-05-06T20:10:57.706560598Z",
+  "closed_at": "2026-05-06T20:10:57.706560598Z",
   "labels": [
     "refactor"
   ]
