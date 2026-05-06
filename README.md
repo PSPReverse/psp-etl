@@ -99,6 +99,22 @@ psp-etl stats                    # Per-generation summary dashboard
 
 Note: Gigabyte's main site is behind Akamai Bot Manager. The scraper sends a Chrome-like User-Agent and works from residential or office IPs; from datacenter IPs it will see HTTP 403. The CDN itself is unrestricted once download URLs are known.
 
+## Known limitations
+
+- **No EPYC (server) coverage yet.** All scrapers target consumer Ryzen
+  motherboards on AM4 and AM5. EPYC server platforms (SP3 for Naples/
+  Rome/Milan, SP5 for Genoa/Bergamo/Turin, etc.) ship via system OEMs
+  (Supermicro, Dell, HPE, Lenovo) and AMD reference releases, none of
+  which are scraped today. Manual ingest still works (`psp-etl ingest
+  <rom>`), but `scrape` will never find an EPYC ROM. The pipeline,
+  schema, and analysis layer are platform-agnostic — only the scrapers
+  are consumer-only.
+- **Some Zen 4/5 ROMs trigger PSPTool warnings** (FET/ROM-size mismatch).
+  Output is still produced; tracked in issue #58.
+- **`data/` directories grow large.** A full multi-vendor scrape is on
+  the order of 20–40 GB of ROMs and extracted blobs. Plan storage
+  accordingly; nothing under `data/` is committed to git.
+
 ## Project structure
 
 ```
