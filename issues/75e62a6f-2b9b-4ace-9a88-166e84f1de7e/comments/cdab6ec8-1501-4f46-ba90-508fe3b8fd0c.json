@@ -1,0 +1,10 @@
+{
+  "uuid": "cdab6ec8-1501-4f46-ba90-508fe3b8fd0c",
+  "issue_uuid": "75e62a6f-2b9b-4ace-9a88-166e84f1de7e",
+  "author": "driver",
+  "content": "Landed in 26cd0404 (ApplyPspAddressSpaces.java). Creates SMN+X86 overlay spaces, registers SMN_Pointer/X86_Pointer typedefs, rebinds existing plain typedefs into PointerTypedefs. Validated on Ryzen_Zen2_ver_0d15 (X86PADDR, 4 listing instances preserved) and Ryzen_Zen2_ver_0d1a (X86PADDR + SMNADDR, 6 + 0 instances). Idempotent on re-run.",
+  "created_at": "2026-05-06T19:17:04.220559340Z",
+  "kind": "note",
+  "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+  "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAeUVE0YPvSbPHCxXNxJemkI550G/03vhvvZ3J7+gopsxMR0jYdkkn1QIJpKjohP/XHoPj4FX83ioRU2QMJRhQCA=="
+}
