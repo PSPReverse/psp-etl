@@ -22,7 +22,9 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 from rich.table import Table
 
+from psp_etl import strings as strings_mod
 from psp_etl.db import Database, Image, PrimaryImage, StringAnalysis
+from psp_etl.ingest import ingest_rom
 from psp_etl.scrape.asrock import AsRockScraper
 from psp_etl.scrape.asus import AsusScraper
 from psp_etl.scrape.base import VendorScraper
@@ -75,8 +77,6 @@ def cli(ctx: click.Context, data_dir: Path) -> None:
 @click.pass_context
 def ingest(ctx: click.Context, roms: tuple[Path, ...], vendor: str, model: str | None) -> None:
     """Parse ROM file(s) or directory, extract PSP entries and blobs."""
-    from psp_etl.ingest import ingest_rom
-
     data_dir: Path = ctx.obj["data_dir"]
     db_path = data_dir / "psp-etl.db"
     roms_dir = data_dir / "roms"
@@ -140,8 +140,6 @@ def ingest(ctx: click.Context, roms: tuple[Path, ...], vendor: str, model: str |
 @click.pass_context
 def analyze(ctx: click.Context, reanalyze: bool) -> None:
     """Run string analysis on all unanalyzed blobs."""
-    from psp_etl import strings as strings_mod
-
     data_dir: Path = ctx.obj["data_dir"]
     db_path = data_dir / "psp-etl.db"
     blobs_dir = data_dir / "blobs"
