@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import os.path
 import re
 import time
 import zipfile
@@ -24,6 +25,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from psp_etl.scrape.base import BiosUpdate, BoardInfo, VendorScraper
+from psp_etl.scrape.extract import safe_namelist
 
 logger = logging.getLogger(__name__)
 
@@ -499,7 +501,7 @@ def _extract_rom_from_zip(zip_data: bytes, update: BiosUpdate) -> bytes:
     version_ext_pattern = re.compile(r"\.[Ff]\d+[a-zA-Z]*$")
 
     with zipfile.ZipFile(BytesIO(zip_data)) as zf:
-        names = zf.namelist()
+        names = safe_namelist(zf)
         logger.debug("ZIP contents for %s: %s", update.bios_version, names)
 
         # Filter to top-level files only (ignore subdirectory contents that
@@ -540,9 +542,6 @@ def _extract_rom_from_zip(zip_data: bytes, update: BiosUpdate) -> bytes:
 
 def _splitext(path: str) -> tuple[str, str]:
     """Split a filename into (base, ext) handling Gigabyte version extensions like .F15."""
-    # Try standard splitext first
-    import os.path
-
     base, ext = os.path.splitext(path)
     if ext:
         return base, ext

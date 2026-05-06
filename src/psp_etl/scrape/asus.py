@@ -9,6 +9,7 @@ from pathlib import Path
 import httpx
 
 from psp_etl.scrape.base import BiosUpdate, BoardInfo, VendorScraper
+from psp_etl.scrape.extract import safe_namelist
 
 # ASUS capsule header size to strip from .CAP files
 ASUS_CAP_HEADER_SIZE = 0x800
@@ -89,7 +90,7 @@ class AsusScraper(VendorScraper):
             self._client = httpx.AsyncClient(
                 timeout=30.0,
                 follow_redirects=True,
-                headers={"User-Agent": "Mozilla/5.0 (compatible; psp-etl/0.1)"},
+                headers={"User-Agent": "Mozilla/5.0 (compatible; psp-etl)"},
             )
         return self
 
@@ -224,7 +225,7 @@ class AsusScraper(VendorScraper):
         dest_dir.mkdir(parents=True, exist_ok=True)
 
         with zipfile.ZipFile(BytesIO(resp.content)) as zf:
-            cap_names = [n for n in zf.namelist() if n.upper().endswith(".CAP")]
+            cap_names = [n for n in safe_namelist(zf) if n.upper().endswith(".CAP")]
             if not cap_names:
                 raise ValueError(f"No .CAP file found in ZIP for {update.board.model} v{update.bios_version}")
             # Use the first .CAP (there is typically only one)

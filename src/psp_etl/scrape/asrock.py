@@ -22,6 +22,7 @@ from urllib.parse import quote, unquote
 import httpx
 
 from psp_etl.scrape.base import BiosUpdate, BoardInfo, VendorScraper
+from psp_etl.scrape.extract import safe_namelist
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class AsRockScraper(VendorScraper):
             self._client = httpx.AsyncClient(
                 timeout=60.0,
                 follow_redirects=True,
-                headers={"User-Agent": "psp-etl/0.1 (+https://github.com/vringar/psp-etl)"},
+                headers={"User-Agent": "psp-etl"},
             )
         return self
 
@@ -193,7 +194,7 @@ def extract_rom(zf: zipfile.ZipFile, dest_dir: Path, update: BiosUpdate) -> Path
     Falls back to the largest file when no recognised extension is found.
     Skips macOS resource-fork entries (``__MACOSX/``).
     """
-    entries = [name for name in zf.namelist() if not name.startswith("__MACOSX") and not name.endswith("/")]
+    entries = [name for name in safe_namelist(zf) if not name.startswith("__MACOSX") and not name.endswith("/")]
     if not entries:
         raise ValueError(f"Empty ZIP for {update.board.model} {update.bios_version}")
 

@@ -23,25 +23,28 @@ class BiosUpdate:
 
 
 class VendorScraper(ABC):
-    """Abstract base for vendor-specific BIOS scrapers."""
+    """Abstract base for vendor-specific BIOS scrapers.
+
+    Subclasses typically override ``__aenter__`` to lazily create an
+    ``httpx.AsyncClient`` and ``__aexit__`` to close it. The default
+    implementations here are no-ops so a subclass can opt out by passing
+    a pre-built client to ``__init__``.
+    """
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, *args):
-        pass
+        return None
 
     @abstractmethod
     async def list_boards(self) -> list[BoardInfo]:
         """Enumerate all AM4/AM5 motherboard models."""
-        ...
 
     @abstractmethod
     async def list_bios_updates(self, board: BoardInfo) -> list[BiosUpdate]:
         """List all available BIOS updates for a board."""
-        ...
 
     @abstractmethod
     async def download(self, update: BiosUpdate, dest_dir: Path) -> Path:
         """Download and unwrap a BIOS update, return path to raw ROM."""
-        ...

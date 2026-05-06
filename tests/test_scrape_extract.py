@@ -8,11 +8,13 @@ import pytest
 from psp_etl.scrape.extract import (
     ASUS_CAP_HEADER_SIZE,
     PSP_SIGNATURES,
+    HostileZipError,
     extract_rom_from_zip,
+    is_safe_zip_member,
+    safe_namelist,
     unwrap_asus_cap,
     validate_psp_rom,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -235,3 +237,85 @@ class TestValidatePspRom:
         assert b"$PL2" in PSP_SIGNATURES
         assert b"$BHD" in PSP_SIGNATURES
         assert b"$BL2" in PSP_SIGNATURES
+
+
+# ---------------------------------------------------------------------------
+# is_safe_zip_member / safe_namelist — hostile ZIP detection
+# ---------------------------------------------------------------------------
+
+
+class TestIsSafeZipMember:
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "firmware.rom",
+            "subdir/firmware.rom",
+            "deep/nested/path/file.bin",
+            "file with spaces.rom",
+        ],
+    )
+    def test_safe_names(self, name):
+        assert is_safe_zip_member(name) is True
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "../etc/passwd",
+            "../../../../etc/shadow",
+            "subdir/../../etc/passwd",
+            "/etc/passwd",
+            "/absolute/file",
+            "C:/Windows/System32",
+            "subdir\\file.rom",
+            "",
+        ],
+    )
+    def test_hostile_names_rejected(self, name):
+        assert is_safe_zip_member(name) is False
+
+
+class TestSafeNamelist:
+    def test_returns_namelist_for_clean_zip(self):
+        zip_bytes = _make_zip(
+            {
+                "firmware.rom": b"data",
+                "subdir/notes.txt": b"text",
+            }
+        )
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            names = safe_namelist(zf)
+            assert "firmware.rom" in names
+            assert "subdir/notes.txt" in names
+
+    def test_raises_on_path_traversal(self):
+        # We can't put ".." into a ZIP via writestr's normal path easily, so
+        # craft the ZIP local-file header by hand. Simplest path: write to a
+        # ZipInfo with the dangerous name.
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            info = zipfile.ZipInfo("../etc/passwd")
+            zf.writestr(info, b"x")
+            zf.writestr("firmware.rom", b"y")
+        with zipfile.ZipFile(io.BytesIO(buf.getvalue())) as zf:
+            with pytest.raises(HostileZipError, match="path-traversal"):
+                safe_namelist(zf)
+
+    def test_raises_on_absolute_path(self):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            info = zipfile.ZipInfo("/etc/passwd")
+            zf.writestr(info, b"x")
+        with zipfile.ZipFile(io.BytesIO(buf.getvalue())) as zf:
+            with pytest.raises(HostileZipError):
+                safe_namelist(zf)
+
+    def test_extract_rom_from_zip_rejects_hostile(self, tmp_path):
+        """Top-level extractor refuses a hostile archive instead of silently skipping."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr(zipfile.ZipInfo("../escape.rom"), b"\xff" * 64)
+            zf.writestr("legit.rom", b"\xaa" * 64)
+        zip_path = tmp_path / "bios.zip"
+        zip_path.write_bytes(buf.getvalue())
+        with pytest.raises(HostileZipError):
+            extract_rom_from_zip(zip_path, tmp_path / "out", vendor="MSI")

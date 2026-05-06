@@ -2,4 +2,4 @@
 
 from psp_etl.scrape.base import BiosUpdate, BoardInfo, VendorScraper
 
-__all__ = ["BoardInfo", "BiosUpdate", "VendorScraper"]
+__all__ = ["BiosUpdate", "BoardInfo", "VendorScraper"]

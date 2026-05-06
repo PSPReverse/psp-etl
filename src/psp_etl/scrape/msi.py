@@ -19,17 +19,18 @@ Range request to read it without downloading the full 8–20 MB archive.
 
 from __future__ import annotations
 
+import io
 import logging
 import re
 import struct
-import zlib
 import zipfile
-import io
+import zlib
 from pathlib import Path
 
 import httpx
 
 from psp_etl.scrape.base import BiosUpdate, BoardInfo, VendorScraper
+from psp_etl.scrape.extract import safe_namelist
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ class MsiScraper(VendorScraper):
             self._client = httpx.AsyncClient(
                 timeout=60.0,
                 follow_redirects=True,
-                headers={"User-Agent": "psp-etl/0.1 (+https://github.com/vringar/psp-etl)"},
+                headers={"User-Agent": "psp-etl"},
             )
         return self
 
@@ -315,7 +316,7 @@ def _extract_txt_from_zip_header(data: bytes) -> str | None:
                     return zlib.decompress(chunk, -15).decode("utf-8", errors="replace")
                 if compress == 0:
                     return chunk[:uncomp_size].decode("utf-8", errors="replace")
-            except Exception:
+            except (zlib.error, UnicodeDecodeError):
                 return None
         # Advance to next entry (comp_size == 0 for stored empty dirs)
         offset = data_offset + comp_size
@@ -363,7 +364,7 @@ def _extract_rom(zf: zipfile.ZipFile, dest_dir: Path, update: BiosUpdate) -> Pat
     """
     skip_exts = {".txt", ".doc", ".exe", ".bat", ".pdf", ".htm", ".html"}
     candidates = [
-        name for name in zf.namelist() if not name.endswith("/") and Path(name).suffix.lower() not in skip_exts
+        name for name in safe_namelist(zf) if not name.endswith("/") and Path(name).suffix.lower() not in skip_exts
     ]
     if not candidates:
         raise ValueError(

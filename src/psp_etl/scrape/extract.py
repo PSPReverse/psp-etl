@@ -6,7 +6,7 @@ Handles ZIP extraction and vendor-specific unwrapping:
 """
 
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 # ASUS CAP capsule header size (0x800 = 2048 bytes)
 ASUS_CAP_HEADER_SIZE = 0x800
@@ -28,12 +28,56 @@ _ALL_ROM_EXTENSIONS = _ASUS_EXTENSIONS | _DIRECT_EXTENSIONS
 PSP_SIGNATURES: tuple[bytes, ...] = (b"$PSP", b"$PL2", b"$BHD", b"$BL2")
 
 
+class HostileZipError(ValueError):
+    """Raised when a ZIP archive contains a path-traversal entry.
+
+    Even though we never extract by name onto disk (we always write to a
+    path we construct ourselves), entry names flow into output filenames
+    via ``Path(name).stem`` etc., and are user-controlled (a hostile vendor
+    mirror could serve a malicious ZIP). We refuse to process such archives.
+    """
+
+
+def is_safe_zip_member(name: str) -> bool:
+    """Return True if *name* is safe to use as a ZIP archive member name.
+
+    Rejects entries with absolute paths, drive letters, or ``..`` components.
+    """
+    if not name:
+        return False
+    # Reject Windows-style absolute paths and drive letters.
+    if "\\" in name or (len(name) >= 2 and name[1] == ":"):
+        return False
+    p = PurePosixPath(name)
+    if p.is_absolute():
+        return False
+    return all(part != ".." for part in p.parts)
+
+
+def safe_namelist(zf: zipfile.ZipFile) -> list[str]:
+    """Return ``zf.namelist()`` after rejecting any path-traversal entries.
+
+    Raises:
+        HostileZipError: if the archive contains an entry with an absolute
+            path, a drive letter, a backslash, or a ``..`` component. We
+            fail loudly rather than silently filter so an attack on a vendor
+            mirror is not invisible.
+    """
+    names = zf.namelist()
+    bad = [name for name in names if not is_safe_zip_member(name)]
+    if bad:
+        raise HostileZipError(
+            f"ZIP contains {len(bad)} path-traversal entry(ies); refusing to process. First offending name: {bad[0]!r}"
+        )
+    return names
+
+
 def _find_rom_in_zip(zf: zipfile.ZipFile, extensions: frozenset[str]) -> str:
     """Return the name of the first entry in *zf* whose suffix matches *extensions*.
 
     Raises FileNotFoundError if no matching entry is found.
     """
-    for name in zf.namelist():
+    for name in safe_namelist(zf):
         if Path(name).suffix.lower() in extensions:
             return name
     raise FileNotFoundError(f"No file with extension(s) {extensions} found in ZIP (contents: {zf.namelist()})")
