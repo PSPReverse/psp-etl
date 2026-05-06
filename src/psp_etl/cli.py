@@ -24,7 +24,7 @@ from rich.table import Table
 
 from psp_etl import strings as strings_mod
 from psp_etl.db import Database, Image, PrimaryImage, StringAnalysis
-from psp_etl.ingest import ingest_rom
+from psp_etl.ingest import BOARD_CLASSES, classify_board_class, ingest_rom
 from psp_etl.scrape.asrock import AsRockScraper
 from psp_etl.scrape.asus import AsusScraper
 from psp_etl.scrape.base import VendorScraper
@@ -208,6 +208,13 @@ def analyze(ctx: click.Context, reanalyze: bool) -> None:
 
 @cli.command()
 @click.option("--gen", type=click.Choice(["zen1", "zen2", "zen3", "zen4", "zen5"]), help="Filter by Zen generation.")
+@click.option(
+    "--board-class",
+    "board_class",
+    type=click.Choice(BOARD_CLASSES, case_sensitive=False),
+    default=None,
+    help="Filter by board class (Ryzen / EPYC / Threadripper / ThreadripperPro / Embedded).",
+)
 @click.option("--type", "type_id", type=str, default=None, help="Filter by hex type_id (e.g. 0x08).")
 @click.option("--vendor", type=str, default=None, help="Filter by vendor name.")
 @click.option("--min-score", type=float, default=None, help="Minimum string analysis score.")
@@ -219,6 +226,7 @@ def analyze(ctx: click.Context, reanalyze: bool) -> None:
 def query(
     ctx: click.Context,
     gen: str | None,
+    board_class: str | None,
     type_id: str | None,
     vendor: str | None,
     min_score: float | None,
@@ -247,6 +255,7 @@ def query(
     with Database(db_path) as db:
         rows = db.query_entries(
             zen_generation=gen,
+            board_class=board_class,
             type_id=parsed_type_id,
             vendor=vendor,
             min_score=min_score,
@@ -262,7 +271,7 @@ def query(
     _QUERY_FORMATTERS[fmt](rows)
 
 
-_QUERY_COLUMNS = ["type_name", "version", "zen_generation", "vendor", "model", "score"]
+_QUERY_COLUMNS = ["type_name", "version", "zen_generation", "board_class", "vendor", "model", "score"]
 
 
 def _query_format_table(rows: list) -> None:
@@ -271,6 +280,7 @@ def _query_format_table(rows: list) -> None:
     table.add_column("Type", style="cyan")
     table.add_column("Version")
     table.add_column("Gen", style="green")
+    table.add_column("Board")
     table.add_column("Vendor", style="magenta")
     table.add_column("Model")
     table.add_column("Score", justify="right", style="yellow")
@@ -280,6 +290,7 @@ def _query_format_table(rows: list) -> None:
             row["type_name"] or f"0x{row['type_id']:02x}",
             row["version"] or "",
             row["zen_generation"] or "",
+            row["board_class"] or "",
             row["vendor"] or "",
             row["model"] or "",
             f"{score:.1f}" if score is not None else "—",
@@ -320,6 +331,13 @@ _QUERY_FORMATTERS = {
     help="Filter by Zen generation.",
 )
 @click.option(
+    "--board-class",
+    "board_class",
+    type=click.Choice(BOARD_CLASSES, case_sensitive=False),
+    default=None,
+    help="Filter by board class.",
+)
+@click.option(
     "--type",
     "type_id",
     type=str,
@@ -330,7 +348,7 @@ _QUERY_FORMATTERS = {
     "--folder",
     is_flag=True,
     default=False,
-    help="Show best folder (image+directory) per generation instead of per type.",
+    help="Show best folder (image+directory) per (generation, board_class) instead of per type.",
 )
 @click.option(
     "--format",
@@ -349,6 +367,7 @@ _QUERY_FORMATTERS = {
 def best(
     ctx: click.Context,
     gen: str | None,
+    board_class: str | None,
     type_id: str | None,
     folder: bool,
     fmt: str,
@@ -365,7 +384,7 @@ def best(
 
     if folder:
         with Database(db_path) as db:
-            rows = db.get_best_folders(zen_generation=gen)
+            rows = db.get_best_folders(zen_generation=gen, board_class=board_class)
             if not rows:
                 click.echo("No primary images found.")
                 return
@@ -377,6 +396,7 @@ def best(
                     records.append(
                         {
                             "zen_generation": row["zen_generation"],
+                            "board_class": row["board_class"],
                             "vendor": row["vendor"],
                             "model": row["model"],
                             "bios_version": row["bios_version"],
@@ -399,8 +419,9 @@ def best(
                 click.echo(json.dumps(records, indent=2))
                 return
 
-        table = Table(title="Best PSP Folder per Generation")
+        table = Table(title="Best PSP Folder per (Generation, Board Class)")
         table.add_column("Gen", style="cyan")
+        table.add_column("Board")
         table.add_column("Vendor", style="magenta")
         table.add_column("Model")
         table.add_column("BIOS", style="dim")
@@ -410,6 +431,7 @@ def best(
         for row in rows:
             table.add_row(
                 row["zen_generation"] or "—",
+                row["board_class"] or "—",
                 row["vendor"] or "—",
                 row["model"] or "—",
                 row["bios_version"] or "—",
@@ -437,7 +459,8 @@ def best(
                             continue
                         raw_name = entry["type_name"] or f"type_{entry['type_id']:02x}"
                         type_name = raw_name.replace("/", "_").replace(" ", "_")
-                        dest = export_dir / f"{row['zen_generation']}_{type_name}.bin"
+                        bc = row["board_class"] or "unknown"
+                        dest = export_dir / f"{bc}_{row['zen_generation']}_{type_name}.bin"
                         shutil.copy2(src, dest)
                         console.print(f"  [dim]{dest.name}[/dim]")
                         exported += 1
@@ -457,7 +480,7 @@ def best(
             ) from exc
 
     with Database(db_path) as db:
-        rows = db.get_best_entries(zen_generation=gen, type_id=parsed_type_id)
+        rows = db.get_best_entries(zen_generation=gen, board_class=board_class, type_id=parsed_type_id)
 
     if not rows:
         click.echo("No primary images found.")
@@ -469,6 +492,7 @@ def best(
                 [
                     {
                         "zen_generation": row["zen_generation"],
+                        "board_class": row["board_class"],
                         "type_id": f"0x{row['type_id']:02x}",
                         "type_name": row["type_name"],
                         "score": row["score"],
@@ -484,6 +508,7 @@ def best(
 
     table = Table(title="Best PSP Firmware Images")
     table.add_column("Gen", style="cyan")
+    table.add_column("Board")
     table.add_column("Type ID", style="yellow")
     table.add_column("Type Name")
     table.add_column("Version")
@@ -493,6 +518,7 @@ def best(
     for row in rows:
         table.add_row(
             row["zen_generation"] or "—",
+            row["board_class"] or "—",
             f"0x{row['type_id']:02x}",
             row["type_name"] or "(unknown)",
             row["version"] or "(unknown)",
@@ -615,6 +641,7 @@ async def _scrape_async(
                                     vendor=board.vendor,
                                     model=board.model,
                                     socket=board.socket,
+                                    board_class=classify_board_class(board.socket),
                                     bios_version=update.bios_version,
                                     agesa_version=update.agesa_version,
                                     download_url=update.download_url,
@@ -655,16 +682,17 @@ def select(ctx: click.Context) -> None:
         cross_vendor_cases: list[dict] = []
 
         def _group_key(row: sqlite3.Row) -> tuple:
-            return (row["zen_generation"], row["type_id"])
+            return (row["zen_generation"], row["board_class"], row["type_id"])
 
         for key, group_iter in groupby(candidates, key=_group_key):
-            zen_gen, type_id = key
+            zen_gen, board_cls, type_id = key
             entries = list(group_iter)
             best_entry = entries[0]  # ordered by score DESC
 
             db.upsert_primary_image(
                 PrimaryImage(
                     zen_generation=zen_gen,
+                    board_class=board_cls,
                     type_id=type_id,
                     version=best_entry["version"],
                     best_entry_id=best_entry["entry_id"],
@@ -676,6 +704,7 @@ def select(ctx: click.Context) -> None:
             selections.append(
                 {
                     "zen_generation": zen_gen,
+                    "board_class": board_cls,
                     "type_id": type_id,
                     "type_name": best_entry["type_name"] or "",
                     "version": best_entry["version"],
@@ -693,14 +722,16 @@ def select(ctx: click.Context) -> None:
             if len(distinct_md5s) > 1:
                 vendors_by_md5 = {md5: sorted(vs) for md5, vs in md5_vendors.items() if md5 is not None}
                 logger.info(
-                    "Cross-vendor md5 difference: gen=%s type=%d — %s",
+                    "Cross-vendor md5 difference: gen=%s board=%s type=%d — %s",
                     zen_gen,
+                    board_cls,
                     type_id,
                     vendors_by_md5,
                 )
                 cross_vendor_cases.append(
                     {
                         "zen_generation": zen_gen,
+                        "board_class": board_cls,
                         "type_id": type_id,
                         "md5_vendors": vendors_by_md5,
                     }
@@ -708,6 +739,7 @@ def select(ctx: click.Context) -> None:
 
         table = Table(title="Primary Image Selections")
         table.add_column("Generation", style="cyan")
+        table.add_column("Board")
         table.add_column("Type ID", justify="right")
         table.add_column("Type Name")
         table.add_column("Version")
@@ -717,9 +749,10 @@ def select(ctx: click.Context) -> None:
         for sel in selections:
             table.add_row(
                 sel["zen_generation"],
+                sel["board_class"] or "—",
                 str(sel["type_id"]),
                 sel["type_name"],
-                sel["version"],
+                sel["version"] or "",
                 sel["vendor"],
                 f"{sel['score']:.1f}",
                 str(sel["candidates"]),
@@ -732,7 +765,9 @@ def select(ctx: click.Context) -> None:
                 f"\n[yellow]{len(cross_vendor_cases)} cross-vendor compilation difference(s) detected:[/yellow]"
             )
             for case in cross_vendor_cases:
-                console.print(f"  gen={case['zen_generation']} type={case['type_id']}")
+                console.print(
+                    f"  gen={case['zen_generation']} board={case['board_class'] or '—'} type={case['type_id']}"
+                )
                 for md5, vendors in case["md5_vendors"].items():
                     console.print(f"    md5={md5[:12]}… → {', '.join(vendors)}")
 
@@ -751,7 +786,7 @@ def select(ctx: click.Context) -> None:
 )
 @click.pass_context
 def stats(ctx: click.Context, gen: str | None) -> None:
-    """Show a per-generation summary dashboard."""
+    """Show a per-(generation, board_class) summary dashboard."""
     data_dir: Path = ctx.obj["data_dir"]
     db_path = data_dir / "psp-etl.db"
 
@@ -786,6 +821,28 @@ def stats(ctx: click.Context, gen: str | None) -> None:
         if not rows:
             gen_table.add_row("[dim]no data[/dim]", "", "", "")
         console.print(gen_table)
+
+        gc_table = Table(title=f"Entries per (Generation, Board Class){title_suffix}", box=box.SIMPLE_HEAD)
+        gc_table.add_column("Generation", style="cyan")
+        gc_table.add_column("Board")
+        gc_table.add_column("Entries", justify="right")
+        gc_table.add_column("Encrypted", justify="right")
+        gc_table.add_column("Enc%", justify="right")
+        rows = db.stats_entries_by_generation_and_class(gen)
+        for row in rows:
+            total = row["total"]
+            enc = row["encrypted_count"] or 0
+            pct = f"{100.0 * enc / total:.1f}%" if total else "—"
+            gc_table.add_row(
+                row["zen_generation"] or "unknown",
+                row["board_class"] or "unknown",
+                str(total),
+                str(enc),
+                pct,
+            )
+        if not rows:
+            gc_table.add_row("[dim]no data[/dim]", "", "", "", "")
+        console.print(gc_table)
 
         score_table = Table(title=f"String Score Distribution{title_suffix}", box=box.SIMPLE_HEAD)
         score_table.add_column("Generation", style="cyan")

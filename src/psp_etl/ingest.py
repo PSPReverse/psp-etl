@@ -106,6 +106,46 @@ def classify_by_agesa(agesa_version: str | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Board-class classification
+# ---------------------------------------------------------------------------
+
+# Maps a CPU socket string to its canonical board_class label.
+#
+# Note: 'Embedded' is a valid value for images.board_class but no socket maps
+# to it yet — it will be populated when an embedded scraper lands.
+_SOCKET_TO_BOARD_CLASS: dict[str, str] = {
+    "AM4": "Ryzen",
+    "AM5": "Ryzen",
+    "SP3": "EPYC",
+    "SP5": "EPYC",
+    "SP6": "EPYC",
+    "sTRX4": "Threadripper",
+    "sTR5": "Threadripper",
+    "sWRX8": "ThreadripperPro",
+}
+
+BOARD_CLASSES: tuple[str, ...] = (
+    "Ryzen",
+    "EPYC",
+    "Threadripper",
+    "ThreadripperPro",
+    "Embedded",
+)
+
+
+def classify_board_class(socket: str | None) -> str | None:
+    """Map a CPU socket to a canonical board_class label.
+
+    Returns one of ``BOARD_CLASSES`` or ``None`` when *socket* is unknown
+    or ``None``.  Mirrors today's NULL-socket semantics: when the scraper
+    failed to detect a socket, board_class is also NULL.
+    """
+    if socket is None:
+        return None
+    return _SOCKET_TO_BOARD_CLASS.get(socket)
+
+
+# ---------------------------------------------------------------------------
 # Core ingestion
 # ---------------------------------------------------------------------------
 

@@ -65,6 +65,17 @@ nix-build -A psp-etl
   `data/{roms,blobs}/{sha256}.{rom,bin}`. Don't embed user-facing names —
   resolve to human-readable labels (vendor/model/version/type_name) at the
   presentation layer.
+- **No schema migrations.** `data/psp-etl.db` is fully rebuildable from
+  `data/roms/`. When the schema changes, delete the DB and re-run
+  `psp-etl ingest && psp-etl analyze && psp-etl select`. Do not add
+  `ALTER TABLE` migrations or version stamps.
+- **Two orthogonal taxonomies.** `entries.zen_generation`
+  (`zen1`..`zen5`) is the Zen microarchitecture; `images.board_class`
+  (`Ryzen` / `EPYC` / `Threadripper` / `ThreadripperPro` / `Embedded`,
+  derived from `socket` via `ingest.classify_board_class`) is the board
+  family. Both keys partition `primary_images`. Queries that select
+  "best zen2 ABL5" must consider board_class to avoid conflating Ryzen
+  and EPYC variants.
 
 ### SQL (psp-etl)
 

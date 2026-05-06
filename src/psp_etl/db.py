@@ -17,6 +17,7 @@ class Image:
     vendor: str
     model: str | None = None
     socket: str | None = None
+    board_class: str | None = None
     bios_version: str | None = None
     agesa_version: str | None = None
     download_url: str | None = None
@@ -74,6 +75,7 @@ class ParseError:
 class PrimaryImage:
     zen_generation: str
     type_id: int
+    board_class: str | None = None
     version: str | None = None
     best_entry_id: int | None = None
     best_image_id: int | None = None
@@ -92,6 +94,7 @@ CREATE TABLE IF NOT EXISTS images (
     vendor TEXT NOT NULL,
     model TEXT,
     socket TEXT,
+    board_class TEXT,
     bios_version TEXT,
     agesa_version TEXT,
     download_url TEXT,
@@ -145,13 +148,18 @@ CREATE TABLE IF NOT EXISTS strings (
 CREATE TABLE IF NOT EXISTS primary_images (
     id INTEGER PRIMARY KEY,
     zen_generation TEXT NOT NULL,
+    board_class TEXT,
     type_id INTEGER NOT NULL,
     version TEXT,
     best_entry_id INTEGER REFERENCES entries(id),
     best_image_id INTEGER REFERENCES images(id),
-    score REAL,
-    UNIQUE(zen_generation, type_id)
+    score REAL
 );
+
+-- Expression-based unique index so primary_images rows with board_class=NULL
+-- still deduplicate correctly (NULL collates as '' here for matching).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_primary_images_unique
+ON primary_images(zen_generation, COALESCE(board_class, ''), type_id);
 
 CREATE TABLE IF NOT EXISTS parse_errors (
     id INTEGER PRIMARY KEY,
@@ -172,6 +180,7 @@ ON entries(
     COALESCE(zen_generation, '')
 );
 
+CREATE INDEX IF NOT EXISTS idx_images_board_class ON images(board_class);
 CREATE INDEX IF NOT EXISTS idx_entries_gen ON entries(zen_generation);
 CREATE INDEX IF NOT EXISTS idx_entries_type ON entries(type_id);
 CREATE INDEX IF NOT EXISTS idx_entries_md5 ON entries(firmware_md5);
@@ -225,9 +234,10 @@ class Database:
         cur = self._conn.execute(
             """
             INSERT INTO images
-                (sha256, vendor, model, socket, bios_version, agesa_version,
+                (sha256, vendor, model, socket, board_class,
+                 bios_version, agesa_version,
                  download_url, file_size, download_date, rom_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(sha256) DO NOTHING
             """,
             (
@@ -235,6 +245,7 @@ class Database:
                 image.vendor,
                 image.model,
                 image.socket,
+                image.board_class,
                 image.bios_version,
                 image.agesa_version,
                 image.download_url,
@@ -380,9 +391,10 @@ class Database:
         cur = self._conn.execute(
             """
             INSERT INTO primary_images
-                (zen_generation, type_id, version, best_entry_id, best_image_id, score)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(zen_generation, type_id) DO UPDATE SET
+                (zen_generation, board_class, type_id, version,
+                 best_entry_id, best_image_id, score)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(zen_generation, COALESCE(board_class, ''), type_id) DO UPDATE SET
                 version       = excluded.version,
                 best_entry_id = excluded.best_entry_id,
                 best_image_id = excluded.best_image_id,
@@ -390,6 +402,7 @@ class Database:
             """,
             (
                 primary.zen_generation,
+                primary.board_class,
                 primary.type_id,
                 primary.version,
                 primary.best_entry_id,
@@ -401,8 +414,13 @@ class Database:
         return (
             cur.lastrowid
             or self._conn.execute(
-                "SELECT id FROM primary_images WHERE zen_generation = ? AND type_id = ?",
-                (primary.zen_generation, primary.type_id),
+                """
+                SELECT id FROM primary_images
+                WHERE zen_generation = ?
+                  AND COALESCE(board_class, '') = COALESCE(?, '')
+                  AND type_id = ?
+                """,
+                (primary.zen_generation, primary.board_class, primary.type_id),
             ).fetchone()["id"]
         )
 
@@ -425,6 +443,7 @@ class Database:
         self,
         *,
         zen_generation: str | None = None,
+        board_class: str | None = None,
         type_id: int | None = None,
         vendor: str | None = None,
         min_score: float | None = None,
@@ -450,6 +469,10 @@ class Database:
         if zen_generation is not None:
             conditions.append("e.zen_generation = ?")
             params.append(zen_generation)
+
+        if board_class is not None:
+            conditions.append("i.board_class = ?")
+            params.append(board_class)
 
         if type_id is not None:
             conditions.append("e.type_id = ?")
@@ -479,7 +502,7 @@ class Database:
         join_type = "INNER" if (has_strings or min_score is not None) else "LEFT"
 
         sql = f"""
-            SELECT e.*, i.vendor, i.model, i.socket, sa.score
+            SELECT e.*, i.vendor, i.model, i.socket, i.board_class, sa.score
             FROM entries e
             JOIN images i ON i.id = e.image_id
             {join_type} JOIN string_analysis sa ON sa.entry_id = e.id
@@ -491,6 +514,7 @@ class Database:
     def get_best_entries(
         self,
         zen_generation: str | None = None,
+        board_class: str | None = None,
         type_id: int | None = None,
     ) -> list[sqlite3.Row]:
         """Return primary_images rows joined with entry and image details."""
@@ -500,6 +524,10 @@ class Database:
         if zen_generation is not None:
             conditions.append("pi.zen_generation = ?")
             params.append(zen_generation)
+
+        if board_class is not None:
+            conditions.append("pi.board_class = ?")
+            params.append(board_class)
 
         if type_id is not None:
             conditions.append("pi.type_id = ?")
@@ -514,21 +542,23 @@ class Database:
             LEFT JOIN entries e ON e.id = pi.best_entry_id
             LEFT JOIN images i ON i.id = pi.best_image_id
             {where}
-            GROUP BY pi.zen_generation, pi.type_id
+            GROUP BY pi.zen_generation, pi.board_class, pi.type_id
             HAVING pi.score = MAX(pi.score)
-            ORDER BY pi.zen_generation, pi.type_id
+            ORDER BY pi.zen_generation, pi.board_class, pi.type_id
         """
         return self._conn.execute(sql, params).fetchall()
 
     def get_best_folders(
         self,
         zen_generation: str | None = None,
+        board_class: str | None = None,
     ) -> list[sqlite3.Row]:
-        """Return the highest-scoring PSP directory per zen generation.
+        """Return the highest-scoring PSP directory per (zen generation, board class).
 
-        Groups entries by (zen_generation, image_id, directory_magic), sums
-        scores, and returns the top-ranked folder per generation.  BIOS-side
-        directories ($BHD/$BL2) are excluded.
+        Groups entries by (zen_generation, board_class, image_id,
+        directory_magic), sums scores, and returns the top-ranked folder per
+        (generation, board_class).  BIOS-side directories ($BHD/$BL2) are
+        excluded.
         """
         conditions = [
             "e.zen_generation IS NOT NULL",
@@ -540,14 +570,20 @@ class Database:
             conditions.append("e.zen_generation = ?")
             params.append(zen_generation)
 
+        if board_class is not None:
+            conditions.append("i.board_class = ?")
+            params.append(board_class)
+
         where = "WHERE " + " AND ".join(conditions)
 
         sql = f"""
-            SELECT zen_generation, image_id, sha256, vendor, model, socket,
-                   bios_version, directory_magic, total_score, component_count
+            SELECT zen_generation, board_class, image_id, sha256, vendor, model,
+                   socket, bios_version, directory_magic, total_score,
+                   component_count
             FROM (
                 SELECT
                     e.zen_generation,
+                    i.board_class,
                     i.id  AS image_id,
                     i.sha256,
                     i.vendor, i.model, i.socket, i.bios_version,
@@ -555,17 +591,17 @@ class Database:
                     SUM(COALESCE(sa.score, 0))  AS total_score,
                     COUNT(e.id)                 AS component_count,
                     RANK() OVER (
-                        PARTITION BY e.zen_generation
+                        PARTITION BY e.zen_generation, i.board_class
                         ORDER BY SUM(COALESCE(sa.score, 0)) DESC
                     ) AS rnk
                 FROM entries e
                 JOIN images i ON i.id = e.image_id
                 LEFT JOIN string_analysis sa ON sa.entry_id = e.id
                 {where}
-                GROUP BY e.zen_generation, e.image_id, e.directory_magic
+                GROUP BY e.zen_generation, i.board_class, e.image_id, e.directory_magic
             )
             WHERE rnk = 1
-            ORDER BY zen_generation
+            ORDER BY zen_generation, board_class
         """
         return self._conn.execute(sql, params).fetchall()
 
@@ -617,14 +653,14 @@ class Database:
             f"""
             SELECT e.id AS entry_id, e.image_id, e.zen_generation, e.type_id,
                    e.version, e.firmware_md5, e.type_name, e.blob_sha256,
-                   i.vendor, i.model,
+                   i.vendor, i.model, i.board_class,
                    COALESCE(sa.score, 0.0) AS score
             FROM entries e
             JOIN images i ON i.id = e.image_id
             LEFT JOIN string_analysis sa ON sa.entry_id = e.id
             WHERE e.zen_generation IS NOT NULL
               {extra}
-            ORDER BY e.zen_generation, e.type_id, e.version,
+            ORDER BY e.zen_generation, i.board_class, e.type_id, e.version,
                      sa.score DESC NULLS LAST, e.id
             """
         ).fetchall()
@@ -660,6 +696,25 @@ class Database:
             {where}
             GROUP BY zen_generation
             ORDER BY zen_generation
+            """,
+            params,
+        ).fetchall()
+
+    def stats_entries_by_generation_and_class(self, gen: str | None = None) -> list[sqlite3.Row]:
+        """Return per-(generation, board_class) entry and encryption counts."""
+        where = "WHERE e.zen_generation = ?" if gen is not None else ""
+        params = (gen,) if gen is not None else ()
+        return self._conn.execute(
+            f"""
+            SELECT e.zen_generation,
+                   i.board_class,
+                   COUNT(*) AS total,
+                   SUM(CASE WHEN e.encrypted THEN 1 ELSE 0 END) AS encrypted_count
+            FROM entries e
+            JOIN images i ON i.id = e.image_id
+            {where}
+            GROUP BY e.zen_generation, i.board_class
+            ORDER BY e.zen_generation, i.board_class
             """,
             params,
         ).fetchall()
@@ -802,6 +857,26 @@ class Database:
                 """
             ).fetchall()
         }
+        result["by_board_class"] = {
+            (row["board_class"] or "unknown"): row["cnt"]
+            for row in self._conn.execute(
+                """
+                SELECT board_class, COUNT(*) AS cnt
+                FROM images
+                GROUP BY board_class
+                ORDER BY cnt DESC
+                """
+            ).fetchall()
+        }
+        result["by_generation_class"] = [
+            {
+                "zen_generation": row["zen_generation"],
+                "board_class": row["board_class"],
+                "total": row["total"],
+                "encrypted_count": row["encrypted_count"] or 0,
+            }
+            for row in self.stats_entries_by_generation_and_class()
+        ]
         result["encrypted_count"] = self._conn.execute(
             "SELECT COUNT(*) FROM entries WHERE encrypted = TRUE"
         ).fetchone()[0]

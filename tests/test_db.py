@@ -591,3 +591,137 @@ def test_stats(db):
     assert s["by_vendor"]["MSI"] == 1
     assert s["by_generation"]["zen2"] == 2
     assert s["by_generation"]["zen3"] == 1
+
+
+# ---------------------------------------------------------------------------
+# board_class — partitioning of primary_images (issue #77)
+# ---------------------------------------------------------------------------
+
+
+def test_primary_images_partitions_by_board_class(db):
+    """Same (zen_generation, type_id) under different board_class → distinct rows."""
+    img_ryzen = db.insert_image(Image(sha256="ryz1", vendor="ASUS", socket="AM5", board_class="Ryzen"))
+    img_epyc = db.insert_image(Image(sha256="epy1", vendor="ASUS", socket="SP5", board_class="EPYC"))
+
+    e_ryzen = db.insert_entry(
+        Entry(image_id=img_ryzen, type_id=1, zen_generation="zen4", version="1.0", rom_index=0, directory_index=0)
+    )
+    e_epyc = db.insert_entry(
+        Entry(image_id=img_epyc, type_id=1, zen_generation="zen4", version="1.0", rom_index=0, directory_index=0)
+    )
+
+    db.upsert_primary_image(
+        PrimaryImage(
+            zen_generation="zen4",
+            board_class="Ryzen",
+            type_id=1,
+            version="1.0",
+            best_entry_id=e_ryzen,
+            best_image_id=img_ryzen,
+            score=20.0,
+        )
+    )
+    db.upsert_primary_image(
+        PrimaryImage(
+            zen_generation="zen4",
+            board_class="EPYC",
+            type_id=1,
+            version="1.0",
+            best_entry_id=e_epyc,
+            best_image_id=img_epyc,
+            score=18.0,
+        )
+    )
+
+    count = db._conn.execute(
+        "SELECT COUNT(*) FROM primary_images WHERE zen_generation='zen4' AND type_id=1"
+    ).fetchone()[0]
+    assert count == 2
+
+    rows = db.get_best_entries(zen_generation="zen4")
+    boards = {r["board_class"] for r in rows}
+    assert boards == {"Ryzen", "EPYC"}
+
+
+def test_primary_images_null_board_class_dedups(db):
+    """Two upserts with board_class=NULL collapse to one row (NULL ↔ '' in unique idx)."""
+    img = db.insert_image(Image(sha256="img1", vendor="ASUS"))
+    entry_id = db.insert_entry(Entry(image_id=img, type_id=2, zen_generation="zen1"))
+    pi = PrimaryImage(
+        zen_generation="zen1",
+        board_class=None,
+        type_id=2,
+        best_entry_id=entry_id,
+        best_image_id=img,
+        score=5.0,
+    )
+    id1 = db.upsert_primary_image(pi)
+    pi.score = 9.0
+    id2 = db.upsert_primary_image(pi)
+    assert id1 == id2
+    row = db._conn.execute("SELECT score FROM primary_images WHERE id=?", (id1,)).fetchone()
+    assert row["score"] == 9.0
+
+
+def test_query_entries_filter_by_board_class(db):
+    """query_entries respects board_class filter."""
+    img_ryz = db.insert_image(Image(sha256="ryz1", vendor="ASUS", board_class="Ryzen"))
+    img_epy = db.insert_image(Image(sha256="epy1", vendor="ASUS", board_class="EPYC"))
+    db.insert_entry(Entry(image_id=img_ryz, type_id=1, zen_generation="zen4"))
+    db.insert_entry(Entry(image_id=img_epy, type_id=1, zen_generation="zen4"))
+
+    ryz_rows = db.query_entries(board_class="Ryzen")
+    assert len(ryz_rows) == 1
+    assert ryz_rows[0]["board_class"] == "Ryzen"
+
+    epy_rows = db.query_entries(board_class="EPYC")
+    assert len(epy_rows) == 1
+    assert epy_rows[0]["board_class"] == "EPYC"
+
+
+def test_get_best_folders_partitions_by_board_class(db):
+    """get_best_folders ranks per (zen_generation, board_class)."""
+    img_ryz = db.insert_image(Image(sha256="ryz1", vendor="ASUS", board_class="Ryzen"))
+    img_epy = db.insert_image(Image(sha256="epy1", vendor="ASUS", board_class="EPYC"))
+
+    e_ryz = db.insert_entry(
+        Entry(
+            image_id=img_ryz, type_id=1, zen_generation="zen4", directory_magic="$PSP", rom_index=0, directory_index=0
+        )
+    )
+    e_epy = db.insert_entry(
+        Entry(
+            image_id=img_epy, type_id=1, zen_generation="zen4", directory_magic="$PSP", rom_index=0, directory_index=0
+        )
+    )
+    db.insert_string_analysis(
+        StringAnalysis(
+            entry_id=e_ryz,
+            total_strings=10,
+            unique_strings=8,
+            format_strings=1,
+            function_names=0,
+            error_messages=0,
+            postcode_strings=0,
+            descriptive_strings=2,
+            score=10.0,
+        )
+    )
+    db.insert_string_analysis(
+        StringAnalysis(
+            entry_id=e_epy,
+            total_strings=5,
+            unique_strings=4,
+            format_strings=0,
+            function_names=0,
+            error_messages=0,
+            postcode_strings=0,
+            descriptive_strings=1,
+            score=5.0,
+        )
+    )
+
+    rows = db.get_best_folders(zen_generation="zen4")
+    assert len(rows) == 2  # one Ryzen, one EPYC — not collapsed
+    boards = {r["board_class"] for r in rows}
+    assert boards == {"Ryzen", "EPYC"}
