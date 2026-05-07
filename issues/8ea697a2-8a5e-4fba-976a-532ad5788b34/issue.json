@@ -7,5 +7,8 @@
   "priority": "low",
   "created_by": "driver",
   "created_at": "2026-05-07T19:17:07.583109871Z",
-  "updated_at": "2026-05-07T19:17:07.583109871Z"
+  "updated_at": "2026-05-07T19:17:09.606669654Z",
+  "labels": [
+    "feature"
+  ]
 }
