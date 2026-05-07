@@ -46,16 +46,26 @@ CATALOG_URL = "https://www.supermicro.com/support/resources/bios_ipmi.php?vendor
 GETFILE_URL = "https://www.supermicro.com/support/resources/getfile.php"
 PRODUCT_URL_TEMPLATE = "https://www.supermicro.com/en/products/motherboard/{slug}"
 
-# Browser-like headers; the catalog endpoint is fronted by Akamai and
-# rejects bare User-Agent strings.
+# Browser-like headers; the catalog endpoint is fronted by Akamai, which
+# rejects bare User-Agent strings and tightened its filter to also reject
+# UA-only requests that lack the Client Hints / Sec-Fetch-* family a real
+# Chrome navigation sends. Mirrors the working set in gigabyte.py.
 _HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/122.0.0.0 Safari/537.36"
     ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "sec-ch-ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Connection": "keep-alive",
 }
 
 # Map model prefix to AMD socket. Only EPYC and Threadripper Pro families
