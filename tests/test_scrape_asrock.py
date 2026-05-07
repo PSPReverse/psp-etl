@@ -191,17 +191,28 @@ def test_parse_bios_url_str5_preserves_lowercase_s():
     assert result == ("sTR5", "TRX50 WS", "10.01")
 
 
-def test_parse_bios_url_rejects_uppercase_strx4():
-    # The CDN uses 'sTRX4' (lower-s); the case-sensitive regex must reject
-    # a mistakenly upper-cased variant rather than silently coerce it.
-    assert parse_bios_url("https://download.asrock.com/BIOS/STRX4/TRX40%20Creator(1.73)ROM.zip") is None
+def test_parse_bios_url_preserves_uppercase_strx4_as_distinct_folder():
+    # CDN canonical spelling is 'sTRX4'; an upper-cased variant parses as a
+    # distinct folder string. Filtering valid folders is the scraper layer's
+    # job (folders= ctor arg + classify callback) — see #84 refactor.
+    result = parse_bios_url("https://download.asrock.com/BIOS/STRX4/TRX40%20Creator(1.73)ROM.zip")
+    assert result == ("STRX4", "TRX40 Creator", "1.73")
 
 
-def test_parse_bios_url_rejects_unknown_socket():
-    # Folders such as 'Server' or '1700' (Intel) exist on the CDN but must
-    # not be picked up as AMD BIOS URLs.
-    assert parse_bios_url("https://download.asrock.com/BIOS/Server/EPC621D8A(L4.39)ROM.zip") is None
-    assert parse_bios_url("https://download.asrock.com/BIOS/1700/Z790%20Taichi(13.05)ROM.zip") is None
+def test_parse_bios_url_returns_non_amd_folders_verbatim():
+    # parse_bios_url is permissive: any folder name parses. Non-AMD folders
+    # (Server, 1700) are filtered at the scraper layer via folders= and
+    # classify= (see AsRockRackScraper, #84).
+    assert parse_bios_url("https://download.asrock.com/BIOS/Server/EPC621D8A(L4.39)ROM.zip") == (
+        "Server",
+        "EPC621D8A",
+        "L4.39",
+    )
+    assert parse_bios_url("https://download.asrock.com/BIOS/1700/Z790%20Taichi(13.05)ROM.zip") == (
+        "1700",
+        "Z790 Taichi",
+        "13.05",
+    )
 
 
 # ---------------------------------------------------------------------------

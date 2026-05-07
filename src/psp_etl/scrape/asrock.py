@@ -7,7 +7,14 @@ as a reliable alternative data source.
 
 BIOS files are downloaded directly from the ASRock CDN.
 
-URL format: https://download.asrock.com/BIOS/{socket}/{model}({version})ROM.zip
+URL format: https://download.asrock.com/BIOS/{folder}/{model}({version})...
+
+The CDN organises BIOSes under top-level folders that usually name the
+CPU socket (``AM4``, ``AM5``, ``sTRX4``, ``sTR5``, ``TR4``) but for
+ASRock Rack boards they live under a generic ``Server`` folder and the
+socket has to be inferred from the model name. ``AsRockScraper`` and the
+Rack subclass share the same enumerate-and-extract logic and differ only
+in the folder list and the (folder, model) -> socket mapping.
 """
 
 from __future__ import annotations
@@ -16,6 +23,7 @@ import io
 import logging
 import re
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -36,14 +44,21 @@ _CDX_API = "https://web.archive.org/cdx/search/cdx"
 # by the rack scraper (see issue #84).
 _SOCKETS = ("AM4", "AM5", "TR4", "sTRX4", "sTR5")
 
-# Matches: https://download.asrock.com/BIOS/{socket}/{model}({version})...
+# Matches: https://download.asrock.com/BIOS/{folder}/{model}({version})...
+# {folder} is captured loosely so subclasses can target Rack folders
+# (e.g. "Server"); restrict via the ``folders`` constructor parameter.
 _BIOS_URL_RE = re.compile(
-    r"https://download\.asrock\.com/BIOS/(" + "|".join(_SOCKETS) + r")/([^(]+)\(([^)]+)\)",
+    r"https://download\.asrock\.com/BIOS/([^/]+)/([^(]+)\(([^)]+)\)",
 )
 
 
 class AsRockScraper(VendorScraper):
     """ASRock BIOS scraper using Wayback Machine CDX for board enumeration.
+
+    By default the scraper covers the consumer ``AM4`` / ``AM5`` folders.
+    Subclasses pass alternative folder lists and a model-name-based
+    classifier to cover server / workstation lines whose folders don't
+    name the socket directly (see :class:`asrock_rack.AsRockRackScraper`).
 
     Usage::
 
@@ -55,11 +70,22 @@ class AsRockScraper(VendorScraper):
                     path = await scraper.download(update, dest_dir)
     """
 
-    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+    vendor: str = "ASRock"
+
+    def __init__(
+        self,
+        client: httpx.AsyncClient | None = None,
+        *,
+        folders: tuple[str, ...] = _SOCKETS,
+        classify: Callable[[str, str], str | None] | None = None,
+    ) -> None:
         self._client = client
         self._own_client = client is None
-        # Cache: socket -> list of (model, version, url)
-        self._cdx_cache: dict[str, list[tuple[str, str, str]]] = {}
+        self._folders = folders
+        # By default the folder name *is* the socket (AM4 / AM5).
+        self._classify = classify if classify is not None else (lambda folder, _model: folder)
+        # Cache: folder -> list of (socket, model, version, url)
+        self._cdx_cache: dict[str, list[tuple[str, str, str, str]]] = {}
 
     async def __aenter__(self) -> AsRockScraper:
         if self._own_client:
@@ -76,20 +102,26 @@ class AsRockScraper(VendorScraper):
 
     def _require_client(self) -> httpx.AsyncClient:
         if self._client is None:
-            raise RuntimeError("Use 'async with AsRockScraper() as s:' to manage the client lifecycle")
+            raise RuntimeError(f"Use 'async with {type(self).__name__}() as s:' to manage the client lifecycle")
         return self._client
 
-    async def _fetch_cdx_for_socket(self, socket: str) -> list[tuple[str, str, str]]:
-        """Return (model, version, url) tuples for all archived BIOS files.
+    def board_support_url(self, model: str) -> str:
+        """Return the vendor product support page URL for a board model."""
+        return board_support_url(model)
 
-        Results are cached after the first call per socket.
+    async def _fetch_cdx_for_folder(self, folder: str) -> list[tuple[str, str, str, str]]:
+        """Return ``(socket, model, version, url)`` tuples for archived BIOSes in ``folder``.
+
+        The socket is derived from the configured classifier; entries
+        whose model name does not classify (e.g. Intel boards under
+        ``Server/``) are filtered out. Results are cached per folder.
         """
-        if socket in self._cdx_cache:
-            return self._cdx_cache[socket]
+        if folder in self._cdx_cache:
+            return self._cdx_cache[folder]
 
         client = self._require_client()
         params = {
-            "url": f"download.asrock.com/BIOS/{socket}/*",
+            "url": f"download.asrock.com/BIOS/{folder}/*",
             "output": "json",
             "fl": "original",
             "filter": "statuscode:200",
@@ -104,47 +136,56 @@ class AsRockScraper(VendorScraper):
         if rows and rows[0] == ["original"]:
             rows = rows[1:]
 
-        entries: list[tuple[str, str, str]] = []
+        entries: list[tuple[str, str, str, str]] = []
         for row in rows:
             parsed = parse_bios_url(row[0])
-            if parsed is not None:
-                _, model, version = parsed
-                entries.append((model, version, row[0]))
+            if parsed is None:
+                continue
+            url_folder, model, version = parsed
+            if url_folder.lower() != folder.lower():
+                continue
+            socket = self._classify(url_folder, model)
+            if socket is None:
+                continue
+            entries.append((socket, model, version, row[0]))
 
-        self._cdx_cache[socket] = entries
-        logger.debug("CDX returned %d BIOS entries for socket %s", len(entries), socket)
+        self._cdx_cache[folder] = entries
+        logger.debug("CDX returned %d BIOS entries for folder %s", len(entries), folder)
         return entries
 
     async def list_boards(self) -> list[BoardInfo]:
-        """Enumerate ASRock motherboards across every socket in :data:`_SOCKETS`."""
+        """Enumerate motherboards via Wayback Machine CDX across configured folders."""
         seen: dict[tuple[str, str], BoardInfo] = {}
-        for socket in _SOCKETS:
-            entries = await self._fetch_cdx_for_socket(socket)
-            for model, _version, _url in entries:
+        for folder in self._folders:
+            entries = await self._fetch_cdx_for_folder(folder)
+            for socket, model, _version, _url in entries:
                 key = (socket, model)
                 if key not in seen:
                     seen[key] = BoardInfo(
-                        vendor="ASRock",
+                        vendor=self.vendor,
                         model=model,
                         socket=socket,
-                        url=board_support_url(model),
+                        url=self.board_support_url(model),
                     )
         return list(seen.values())
 
     async def list_bios_updates(self, board: BoardInfo) -> list[BiosUpdate]:
         """List all available BIOS updates for a given board."""
-        entries = await self._fetch_cdx_for_socket(board.socket)
-        return [
-            BiosUpdate(
-                board=board,
-                bios_version=version,
-                download_url=url,
-                release_date=None,
-                agesa_version=None,
+        updates: list[BiosUpdate] = []
+        for folder in self._folders:
+            entries = await self._fetch_cdx_for_folder(folder)
+            updates.extend(
+                BiosUpdate(
+                    board=board,
+                    bios_version=version,
+                    download_url=url,
+                    release_date=None,
+                    agesa_version=None,
+                )
+                for socket, model, version, url in entries
+                if socket == board.socket and model == board.model
             )
-            for model, version, url in entries
-            if model == board.model
-        ]
+        return updates
 
     async def download(self, update: BiosUpdate, dest_dir: Path) -> Path:
         """Download a BIOS ZIP from ASRock CDN and extract the raw ROM/BIN."""
@@ -168,7 +209,12 @@ class AsRockScraper(VendorScraper):
 
 
 def parse_bios_url(url: str) -> tuple[str, str, str] | None:
-    """Parse an ASRock BIOS CDN URL into ``(socket, model, version)``.
+    """Parse an ASRock BIOS CDN URL into ``(folder, model, version)``.
+
+    For consumer ASRock boards the folder is the socket (``AM4``,
+    ``AM5``); for ASRock Rack boards it is a non-socket name like
+    ``Server``. Callers map folder + model to a normalised socket via
+    the scraper's classifier.
 
     Returns ``None`` if the URL does not match the expected pattern.
 
@@ -178,14 +224,18 @@ def parse_bios_url(url: str) -> tuple[str, str, str] | None:
         ...     "https://download.asrock.com/BIOS/AM5/B650%20LiveMixer(1.14.AS06)ROM.zip"
         ... )
         ('AM5', 'B650 LiveMixer', '1.14.AS06')
+        >>> parse_bios_url(
+        ...     "https://download.asrock.com/BIOS/Server/X470D4U(3.50)ROM.zip"
+        ... )
+        ('Server', 'X470D4U', '3.50')
     """
     m = _BIOS_URL_RE.match(url)
     if not m:
         return None
-    socket = m.group(1)
+    folder = m.group(1)
     model = unquote(m.group(2)).strip()
     version = m.group(3)
-    return socket, model, version
+    return folder, model, version
 
 
 def board_support_url(model: str) -> str:
