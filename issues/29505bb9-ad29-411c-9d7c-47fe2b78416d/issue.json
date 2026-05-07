@@ -3,11 +3,12 @@
   "display_id": 87,
   "title": "Scraper: Lenovo ThinkSystem AMD + ThinkStation P620/PX (Redfish)",
   "description": "Goal: \n\nAcceptance criteria:\n- \n\nGoal: Scraper for Lenovo's two AMD product lines — ThinkSystem servers (EPYC) and ThinkStation P620/PX (Threadripper Pro). Both are distributed primarily through Lenovo Support Center with a Redfish-style firmware catalog API.\n\nboard_class: EPYC (ThinkSystem SR-series), ThreadripperPro (P620 = sWRX8, PX = sWRX9).\n\nLenovo product families:\n- EPYC ThinkSystem: SR635, SR645, SR655, SR665 (Rome/Milan), SR635 V3, SR645 V3, SR655 V3, SR665 V3 (Genoa)\n- TR-Pro: ThinkStation P620 (sWRX8), ThinkStation PX (sWRX9 forthcoming)\n\nAccess strategy (two options):\n1. **support.lenovo.com** scraping — heavily dynamic JavaScript, difficult without a browser. Not recommended.\n2. **Lenovo XClarity Suggest API** at https://support.lenovo.com/services/ContentService/SearchDrivers — returns JSON listings of firmware updates per machine type. Used by the renxulei/lenovo-redfish-library project. This is the better path.\n3. **fwupd / LVFS** — Lenovo *does* publish some ThinkPad/ThinkStation BIOS to LVFS, but coverage is incomplete for ThinkSystem. Could be a fallback for what's available.\n\nImplementation notes:\n- Lenovo identifies each board by a 4-digit machine type (e.g. P620 = 30E0, SR665 = 7D2W). The scraper needs a small lookup table of (model_name → machine_type).\n- Lenovo BIOS updates ship as .exe (Windows flasher) wrapping the raw image. Extraction layer needs an unwrap step. Reference: BIOSUtilities (platomav, https://github.com/platomav/BIOSUtilities) for Lenovo capsule formats — MIT-licensed, code-adaptable if needed.\n- Larger ThinkSystem 'best recipe' bundles include BMC + BIOS + drives + adapter firmware; we want only the BIOS component.\n\nLicense-safe references:\n- platomav/BIOSUtilities (MIT) — Lenovo unwrap helpers\n- ycomiti/Lenovo-Bios-Scraper — bash, was 404 at survey time, may have a working clone\n\nAcceptance criteria:\n- Class at src/psp_etl/scrape/lenovo.py\n- machine-type table covers at least the SR6x5 + SR6x5 V3 + P620 lineup\n- Tests with API fixture\n- classify_board_class returns EPYC for SP3/SP5 ThinkSystem, ThreadripperPro for P620/PX (already wired)\n- CLI registration\n\nRelated: #79, #81.",
-  "status": "open",
+  "status": "closed",
   "priority": "low",
   "created_by": "driver",
   "created_at": "2026-05-07T07:02:49.174286649Z",
-  "updated_at": "2026-05-07T07:06:12.692995952Z",
+  "updated_at": "2026-05-07T10:50:23.860577760Z",
+  "closed_at": "2026-05-07T10:50:23.860577760Z",
   "labels": [
     "feature",
     "scraper"
