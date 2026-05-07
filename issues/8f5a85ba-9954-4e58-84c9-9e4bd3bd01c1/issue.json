@@ -7,9 +7,12 @@
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-05-07T07:01:41.742554807Z",
-  "updated_at": "2026-05-07T07:01:45.377399389Z",
+  "updated_at": "2026-05-07T07:05:41.906114907Z",
   "labels": [
     "feature",
     "scraper"
+  ],
+  "related": [
+    "1bdec41f-ebb5-4724-898f-3c4987bb10a1"
   ]
 }
