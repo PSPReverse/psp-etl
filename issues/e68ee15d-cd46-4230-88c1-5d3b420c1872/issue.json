@@ -3,11 +3,12 @@
   "display_id": 89,
   "title": "Scraper: HPE ProLiant AMD (SPP package, hardest)",
   "description": "Goal: \n\nAcceptance criteria:\n- \n\nGoal: Scraper for HPE ProLiant DL/Apollo AMD servers. Hardest of the server-vendor scrapers — HPE distributes BIOS only as part of large multi-component **Service Pack for ProLiant (SPP)** ISOs gated behind My HPE Hewlett Packard Enterprise Support Center login.\n\nboard_class: EPYC.\n\nHPE EPYC ProLiant lineup:\n- Rome/Milan: DL325 Gen10 / Gen10 Plus, DL345 Gen10 Plus, DL385 Gen10 / Gen10 Plus, DL725, DL765 Gen11\n- Genoa: DL345 Gen11, DL365 Gen11, DL385 Gen11, DL325 Gen11\n- Apollo: XL225n, XL345 Gen10/Gen11\n\nWhy this is hard:\n- SPP ISO is 5–8 GB; BIOS component is buried inside as a single .scexe (HP self-extracting executable) within the ISO's root /firmware-* tree.\n- HPE Support Center requires **HPE Passport login** for current SPPs. Old SPP ISOs are sometimes archived on archive.org.\n- HPE also publishes individual .scexe BIOS components on https://support.hpe.com/hpesc/public/swd/ but these typically also require login auth tokens.\n\nPossible strategies (in priority order):\n1. **archive.org Wayback CDX** for support.hpe.com/.../*.scexe URLs that were public before login walls expanded. Same pattern as AsRock/MSI; coverage will be partial and historical only.\n2. **vendor-supplied SDR**: HPE publishes Service Definition Repository metadata on https://downloads.linux.hpe.com/SDR/ for ISO/MCP/SPP — sometimes with downloadable per-component .scexe files. Worth investigating.\n3. **Skip HPE entirely for now** and document as unsupported.\n\nUnwrapping:\n- HPE .scexe → standard zlib+executable wrapper. After unwrap, the BIOS payload is still a vendor-specific ROM-image format; recover the raw flash image via tools from BIOSUtilities (MIT) or manual extraction.\n\nLicense-safe references: nothing relevant in surveyed prior art.\n\nAcceptance criteria:\n- Class at src/psp_etl/scrape/hpe.py — even if it's a stub that documents 'no public access without login' until strategy (1) or (2) is proven viable\n- If (1) Wayback path works: at least one fixture ISO/SCExe parsed end-to-end\n- classify_board_class returns EPYC for SP3/SP5 (already wired)\n- CLI registration\n\nNote: this issue is intentionally low priority. If vendor-corpus completeness is goal, prioritise Supermicro/Gigabyte-server/ASRock-Rack/ASUS-server first.\n\nRelated: #79, #81.",
-  "status": "open",
+  "status": "closed",
   "priority": "low",
   "created_by": "driver",
   "created_at": "2026-05-07T07:03:48.150603249Z",
-  "updated_at": "2026-05-07T07:06:16.568797276Z",
+  "updated_at": "2026-05-07T10:51:21.156191045Z",
+  "closed_at": "2026-05-07T10:51:21.156191045Z",
   "labels": [
     "feature",
     "scraper"
