@@ -3,11 +3,12 @@
   "display_id": 91,
   "title": "Scraper: Extend ASUS to Threadripper / Threadripper Pro",
   "description": "Goal: \n\nAcceptance criteria:\n- \n\nGoal: Extend the existing AsusScraper to cover Threadripper (sTRX4/sTR5) and Threadripper Pro (sWRX8/sWRX9) ASUS consumer + workstation boards.\n\nboard_class: Threadripper, ThreadripperPro.\n\nASUS boards in scope:\n- sTRX4: ROG Zenith II Extreme, Prime TRX40-Pro\n- sTR5: ROG Zenith TRX50, Prime TRX50-Sage WiFi\n- sWRX8: Pro WS WRX80E-Sage SE WiFi\n- sWRX9: Pro WS WRX90E-Sage SE\n\nImplementation:\n- src/psp_etl/scrape/asus.py uses SOCKET_SUBSPECS = {'AM4': 532, 'AM5': 172178} for the odinapi.asus.com SeriesFilterResult call. Need to discover the corresponding SubSpec IDs for sTRX4, sTR5, sWRX8, sWRX9.\n- Method: load https://www.asus.com/motherboards-components/motherboards/all-series/?Series=ProductLevel2Code in a browser, switch the socket filter, watch the XHR for the SubSpec param.\n- AM5_CHIPSETS / AM4_CHIPSETS regexes need a TR/TR-Pro counterpart for socket detection from board model name (TRX40, TRX50, WRX80, WRX90 tokens).\n- Add a SOCKET regex match path or a fall-through on the chipset regex.\n\nCoordination with #85 (ASUS Server): Pro WS WRX80E/WRX90E sit awkwardly between consumer and server lines; ASUS classifies them as workstation. Decide which scraper picks them up — recommend this consumer scraper, since the support download flow is identical to consumer.\n\nAcceptance criteria:\n- Existing AM4/AM5 tests pass\n- New tests for at least one TRX40 and one WRX80E board parse and ZIP unwrap\n- SubSpec IDs documented in code comments\n\nRelated: #79, #81.",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-05-07T07:04:22.320997206Z",
-  "updated_at": "2026-05-07T07:05:54.986289847Z",
+  "updated_at": "2026-05-07T10:02:58.671198101Z",
+  "closed_at": "2026-05-07T10:02:58.671198101Z",
   "labels": [
     "feature",
     "scraper"
