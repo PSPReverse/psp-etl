@@ -3,11 +3,12 @@
   "display_id": 83,
   "title": "Scraper: Gigabyte Server (EPYC MZ-series)",
   "description": "Goal: \n\nAcceptance criteria:\n- \n\nGoal: Scraper for Gigabyte server motherboards. Distinct from the existing consumer Gigabyte scraper — server BIOSes live under a different URL tree and product hierarchy.\n\nboard_class: EPYC.\n\nSockets: SP3 (MZ31-AR0, MZ32-AR0), SP5 (MZ33-AR0/AR1, MZ73-LM0/LM1), SP6 (MZ34-AR0 and similar Siena boards).\n\nAccess strategy:\n- Catalog: https://www.gigabyte.com/Enterprise/Server-Motherboard?fid=2816 (AMD filter). Lists MZ-prefixed boards by socket family.\n- Per-board page: https://www.gigabyte.com/Enterprise/Server-Motherboard/{MODEL}-rev-{rev}/support#support-dl-bios — same support tab pattern as the consumer scraper.\n- Same Akamai Bot Manager protection as consumer www.gigabyte.com — reuse the existing _HEADERS dict from src/psp_etl/scrape/gigabyte.py (browser User-Agent + Sec-Fetch + sec-ch-ua headers). CDN download.gigabyte.com is unprotected once the URL is known.\n\nImplementation notes:\n- Heavy code overlap with consumer GigabyteScraper. Two viable shapes:\n  1. **New module** src/psp_etl/scrape/gigabyte_server.py that imports helpers (_HEADERS, _CDN_HEADERS, throttling) from gigabyte.py and overrides the catalog URL/socket detection.\n  2. **Generalise** GigabyteScraper to accept a catalog-URL list and socket-detection regex, then register two CLI entries (gigabyte-consumer, gigabyte-server). Cleaner long-term, more invasive.\n- Recommend (1) initially; revisit (2) if Aspeed BMC firmware scraping is later added (similar structure).\n- BIOS ZIPs for MZ-boards typically contain a raw .ROM/.BIN plus an EFI flash utility — same _extract_rom logic as consumer should work.\n\nLicense-safe references: none in the surveyed prior art covers Gigabyte server.\n\nAcceptance criteria:\n- Class at src/psp_etl/scrape/gigabyte_server.py\n- Tests: catalog parse + per-board BIOS list + fixture ZIP extraction\n- classify_board_class returns EPYC for SP3/SP5/SP6 (already wired)\n- CLI registration\n\nRelated: #79, #81.",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-05-07T07:01:23.033164960Z",
-  "updated_at": "2026-05-07T07:06:22.214521224Z",
+  "updated_at": "2026-05-07T10:04:56.727663655Z",
+  "closed_at": "2026-05-07T10:04:56.727663655Z",
   "labels": [
     "feature",
     "scraper"
