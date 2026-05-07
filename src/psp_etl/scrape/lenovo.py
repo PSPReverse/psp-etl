@@ -43,8 +43,12 @@ from psp_etl.scrape.extract import safe_namelist, validate_psp_rom
 
 logger = logging.getLogger(__name__)
 
-DATACENTER_API = "https://datacentersupport.lenovo.com/api/v4/downloads/drivers"
-PCSUPPORT_API = "https://pcsupport.lenovo.com/api/v4/downloads/drivers"
+# Lenovo's CDN routes the catalog API under a region prefix that matches the
+# request's Accept-Language. The bare `/api/v4/...` path 302s to
+# `/<region>/<lang>/pagenotfound`, which 500s. Fixing the prefix to `/us/en/`
+# (matching our Accept-Language: en-US header) gives a stable JSON response.
+DATACENTER_API = "https://datacentersupport.lenovo.com/us/en/api/v4/downloads/drivers"
+PCSUPPORT_API = "https://pcsupport.lenovo.com/us/en/api/v4/downloads/drivers"
 DATACENTER_REFERER = "https://datacentersupport.lenovo.com/"
 PCSUPPORT_REFERER = "https://pcsupport.lenovo.com/"
 
@@ -267,13 +271,27 @@ class LenovoScraper(VendorScraper):
         else:
             api_url, referer = PCSUPPORT_API, PCSUPPORT_REFERER
 
-        resp = await client.get(
-            api_url,
-            params={"productId": spec.machine_type},
-            headers={"Referer": referer},
-        )
-        resp.raise_for_status()
-        payload = resp.json()
+        try:
+            resp = await client.get(
+                api_url,
+                params={"productId": spec.machine_type},
+                headers={"Referer": referer},
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
+            # Lenovo retires/rebrands MTMs without warning; if any one entry
+            # in the table goes stale we want to skip it and continue with the
+            # rest of the scrape rather than abort the whole run.
+            logger.warning(
+                "Lenovo API request failed for %s (%s): %s",
+                spec.model,
+                spec.machine_type,
+                exc,
+            )
+            self._catalog_cache[spec.machine_type] = []
+            return []
+
         if payload.get("message") != "succeed":
             logger.warning(
                 "Lenovo API returned non-success for %s (%s): %r",

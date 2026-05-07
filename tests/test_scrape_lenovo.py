@@ -512,6 +512,62 @@ def test_list_bios_updates_unknown_model_raises() -> None:
         asyncio.run(run())
 
 
+def test_list_bios_updates_returns_empty_on_http_500() -> None:
+    """A 500 from one MTM logs a warning and yields no updates instead of crashing.
+
+    Regression for issue #98: Lenovo retires MTMs without warning, so a single
+    bad entry in the curated table must not abort the rest of the scrape.
+    """
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _response(500, content=b"server error", url=str(request.url))
+
+    transport = httpx.MockTransport(handler)
+    client = httpx.AsyncClient(transport=transport)
+
+    board = BoardInfo(
+        vendor="Lenovo",
+        model="ThinkSystem SR635 V3",
+        socket="SP5",
+        url="https://x",
+    )
+
+    async def run() -> list[BiosUpdate]:
+        async with LenovoScraper(client=client) as scraper:
+            return await scraper.list_bios_updates(board)
+
+    assert asyncio.run(run()) == []
+
+
+def test_list_bios_updates_returns_empty_on_request_error() -> None:
+    """Network errors (DNS, connection refused, timeouts) also warn-and-continue."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused", request=request)
+
+    transport = httpx.MockTransport(handler)
+    client = httpx.AsyncClient(transport=transport)
+
+    board = BoardInfo(
+        vendor="Lenovo",
+        model="ThinkStation P620",
+        socket="sWRX8",
+        url="https://x",
+    )
+
+    async def run() -> list[BiosUpdate]:
+        async with LenovoScraper(client=client) as scraper:
+            return await scraper.list_bios_updates(board)
+
+    assert asyncio.run(run()) == []
+
+
+def test_api_endpoints_use_region_prefix() -> None:
+    """Lenovo's CDN 500s on the unprefixed /api/v4 path; the URL must include /us/en/."""
+    assert "/us/en/api/v4/downloads/drivers" in DATACENTER_API
+    assert "/us/en/api/v4/downloads/drivers" in PCSUPPORT_API
+
+
 def test_scraper_requires_async_context_manager() -> None:
     """Calling list_bios_updates without entering the context fails loud."""
     scraper = LenovoScraper()
