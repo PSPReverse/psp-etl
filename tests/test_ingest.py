@@ -56,6 +56,16 @@ def test_normalize_zen_generation(raw, expected):
         ("AGESA!.. CBS-GNB-V1.0.0.1", "zen4"),
         ("AGESA!.. CBS-STX-V1.0.0.0", "zen5"),
         ("AGESA_UNKNOWN", None),
+        # Server-flavoured strings emitted by vendor scrapers
+        ("Naples 1.0.0.A", "zen1"),
+        ("RomePI 1.0.0.E", "zen2"),
+        ("MilanCrb 0AC0U025", "zen3"),
+        ("Milan 1.0.0.9", "zen3"),
+        ("Genoa 1.0.0.G", "zen4"),
+        ("Genoa 1.0.0.F", "zen4"),
+        ("Bergamo 1.0.0.3", "zen4"),
+        ("Siena 1.0.0.2", "zen4"),
+        ("Turin 1.0.0.1", "zen5"),
     ],
 )
 def test_classify_by_agesa(agesa, expected):
@@ -149,8 +159,8 @@ def data_dir(tmp_path):
     return d
 
 
-def _insert_image(db: Database) -> int:
-    return db.insert_image(Image(sha256="deadbeef" * 8, vendor="ASUS"))
+def _insert_image(db: Database, agesa_version: str | None = None) -> int:
+    return db.insert_image(Image(sha256="deadbeef" * 8, vendor="ASUS", agesa_version=agesa_version))
 
 
 def test_ingest_rom_creates_entry_and_blob(db, data_dir, tmp_path):
@@ -385,3 +395,73 @@ def test_ingest_rom_entry_dedup(db, data_dir, tmp_path):
 
     count = db._conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
     assert count == 1
+
+
+def test_ingest_rom_backfills_zen_from_image_agesa(db, data_dir, tmp_path):
+    """Server EPYC ROM: PSPTool returns no gen, no rom-level AGESA, but the
+    image row carries a scraper-supplied AGESA codename → all entries get
+    classified from images.agesa_version."""
+    body_psp = b"PSP_FW_GENOA"
+    body_bhd = b"BIOS_FW_GENOA"
+
+    f_psp = _make_fake_file(body=body_psp, type_id=0x01)
+    f_bhd = _make_fake_file(body=body_bhd, type_id=0x62)
+
+    psp_dir = _make_fake_directory([f_psp], zen_generation=None, magic=b"$PSP")
+    bhd_dir = _make_fake_directory([f_bhd], zen_generation=None, magic=b"$BHD")
+
+    rom = _make_fake_rom([psp_dir, bhd_dir], agesa_version=None)
+    fake_psp = _make_fake_psp([rom])
+    image_id = _insert_image(db, agesa_version="Genoa 1.0.0.F")
+
+    rom_path = tmp_path / "test.rom"
+    rom_path.write_bytes(b"\xff" * 0x100)
+
+    with patch("psp_etl.ingest.PSPTool.from_file", return_value=fake_psp):
+        ingest_rom(rom_path, image_id, db, data_dir)
+
+    rows = db._conn.execute("SELECT type_id, zen_generation FROM entries ORDER BY type_id").fetchall()
+    assert len(rows) == 2
+    assert all(r["zen_generation"] == "zen4" for r in rows), rows
+
+
+def test_ingest_rom_no_agesa_keeps_null(db, data_dir, tmp_path):
+    """Manual-vendor image with no agesa_version anywhere → entry stays NULL.
+    The selection step filters NULL out, which is the correct behaviour."""
+    body = b"UNKNOWN_FW"
+    f = _make_fake_file(body=body, type_id=0x01)
+    directory = _make_fake_directory([f], zen_generation=None)
+    rom = _make_fake_rom([directory], agesa_version=None)
+    fake_psp = _make_fake_psp([rom])
+    image_id = _insert_image(db, agesa_version=None)
+
+    rom_path = tmp_path / "test.rom"
+    rom_path.write_bytes(b"\xff" * 0x100)
+
+    with patch("psp_etl.ingest.PSPTool.from_file", return_value=fake_psp):
+        ingest_rom(rom_path, image_id, db, data_dir)
+
+    rows = db._conn.execute("SELECT zen_generation FROM entries").fetchall()
+    assert len(rows) == 1
+    assert rows[0]["zen_generation"] is None
+
+
+def test_ingest_rom_rom_agesa_takes_precedence_over_image_agesa(db, data_dir, tmp_path):
+    """If both rom.agesa_version and image.agesa_version are set, the
+    ROM-embedded one wins (it's closer to the binary truth)."""
+    body = b"DUAL_TAG_FW"
+    f = _make_fake_file(body=body, type_id=0x01)
+    directory = _make_fake_directory([f], zen_generation=None)
+    # rom AGESA → zen2 (Rome consumer tag), image AGESA → zen4 (Genoa).
+    rom = _make_fake_rom([directory], agesa_version="AGESA!.. CBP-RN-V1.0.0.8")
+    fake_psp = _make_fake_psp([rom])
+    image_id = _insert_image(db, agesa_version="Genoa 1.0.0.F")
+
+    rom_path = tmp_path / "test.rom"
+    rom_path.write_bytes(b"\xff" * 0x100)
+
+    with patch("psp_etl.ingest.PSPTool.from_file", return_value=fake_psp):
+        ingest_rom(rom_path, image_id, db, data_dir)
+
+    rows = db._conn.execute("SELECT zen_generation FROM entries").fetchall()
+    assert rows[0]["zen_generation"] == "zen2"

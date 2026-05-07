@@ -418,6 +418,9 @@ class Database:
     def get_image_by_sha256(self, sha256: str) -> sqlite3.Row | None:
         return self._conn.execute("SELECT * FROM images WHERE sha256 = ?", (sha256,)).fetchone()
 
+    def get_image_by_id(self, image_id: int) -> sqlite3.Row | None:
+        return self._conn.execute("SELECT * FROM images WHERE id = ?", (image_id,)).fetchone()
+
     def get_entry_by_id(self, entry_id: int) -> sqlite3.Row | None:
         return self._conn.execute("SELECT * FROM entries WHERE id = ?", (entry_id,)).fetchone()
 

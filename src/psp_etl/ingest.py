@@ -78,17 +78,30 @@ def _normalize_zen_generations(gen: str | None) -> list[str]:
 # Heuristic AGESA-version → Zen generation mapping.
 # PSPTool detects generation from embedded PSP IDs (more reliable), so this
 # is only used as a last-resort fallback when directory.zen_generation is None.
+#
+# Two flavours of AGESA strings exist in the corpus:
+#  * Consumer / engineering tags (CBP-/CBS-) embedded in the ROM by AMD,
+#    which PSPTool may surface as rom.agesa_version.
+#  * Server-flavoured codenames (Naples/Rome/Milan/Genoa/...) that vendor
+#    scrapers extract from BIOS release-notes pages and write to
+#    images.agesa_version (e.g. "Genoa 1.0.0.G", "RomePI 1.0.0.E",
+#    "MilanCrb 0AC0U025"). PSPTool never sees these.
 _AGESA_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     # Family 17h: Naples (Zen 1), Summit Ridge (Zen 1), Raven Ridge (Zen+)
     (re.compile(r"CBP[- _]?(CZP|ZP|SHP|SSP|RVB|PHL)\b", re.IGNORECASE), "zen1"),
+    (re.compile(r"\bNaples(?:PI|Crb)?\b", re.IGNORECASE), "zen1"),
     # Family 17h Mod 30h–3Fh/71h: Rome, Castle Peak, Renoir (Zen 2)
     (re.compile(r"CBP[- _]?(RN|MTS|CZN|SSP2|RVB2)\b", re.IGNORECASE), "zen2"),
+    (re.compile(r"\bRome(?:PI|Crb)?\b", re.IGNORECASE), "zen2"),
     # Family 19h Mod 00h–0Fh: Milan (Zen 3)
     (re.compile(r"CBS[- _]?(GN|MIL|ARL|CHL|VAN)\b", re.IGNORECASE), "zen3"),
-    # Family 19h Mod 40h+ / Family 1Ah: Genoa, Raphael (Zen 4)
+    (re.compile(r"\bMilan(?:PI|Crb|X)?\b", re.IGNORECASE), "zen3"),
+    # Family 19h Mod 40h+ / Family 1Ah: Genoa, Bergamo, Siena, Raphael (Zen 4)
     (re.compile(r"CBS[- _]?(GNB|PHX|RPL|HWK)\b", re.IGNORECASE), "zen4"),
+    (re.compile(r"\b(?:Genoa|Bergamo|Siena)(?:PI|Crb|X)?\b", re.IGNORECASE), "zen4"),
     # Family 1Ah Mod 20h+: Strix Point / Turin (Zen 5)
     (re.compile(r"CBS[- _]?(STX|TUR|KRK)\b", re.IGNORECASE), "zen5"),
+    (re.compile(r"\bTurin(?:PI|Crb|X)?\b", re.IGNORECASE), "zen5"),
 ]
 
 
@@ -145,6 +158,13 @@ def ingest_rom(
         )
         return
 
+    # Image-level AGESA from scrapers (BIOS release-notes / page metadata).
+    # Used as a tertiary fallback when PSPTool doesn't annotate generation
+    # and rom.agesa_version is also missing — common for server BIOSes where
+    # PSPTool's combo_dir / tertiary-tag detection paths don't fire.
+    image_row = db.get_image_by_id(image_id)
+    image_agesa = image_row["agesa_version"] if image_row is not None else None
+
     # --- Walk ROM → directory → file tree ------------------------------------
     for rom_idx, rom in enumerate(psp.blob.roms):
         for dir_idx, directory in enumerate(rom.directories):
@@ -156,6 +176,7 @@ def ingest_rom(
                     directory=directory,
                     rom=rom,
                     image_id=image_id,
+                    image_agesa=image_agesa,
                     db=db,
                     blobs_dir=blobs_dir,
                 )
@@ -172,7 +193,7 @@ def ingest_rom(
 # ---------------------------------------------------------------------------
 
 
-def _ingest_file(*, f, rom_idx, dir_idx, directory, rom, image_id, db, blobs_dir):
+def _ingest_file(*, f, rom_idx, dir_idx, directory, rom, image_id, image_agesa, db, blobs_dir):
     """Extract one PSP firmware file and persist it."""
     # PSPTool raises a wide and undocumented set of exceptions when a file is
     # malformed (struct unpack errors, key derivation errors, decompression
@@ -232,8 +253,12 @@ def _ingest_file(*, f, rom_idx, dir_idx, directory, rom, image_id, db, blobs_dir
     raw_gen = getattr(directory, "zen_generation", None)
     zen_gens: list[str | None] = _normalize_zen_generations(raw_gen)
     if not zen_gens:
-        # No PSP-ID annotation; fall back to AGESA version heuristic.
-        zen_gens = [classify_by_agesa(getattr(rom, "agesa_version", None))]
+        # No PSP-ID annotation; fall back to ROM-embedded AGESA, then to the
+        # scraper-supplied image.agesa_version. The latter unlocks server
+        # BIOSes (EPYC etc.) where PSPTool returns no generation and the ROM
+        # carries no consumer AGESA tag.
+        inferred = classify_by_agesa(getattr(rom, "agesa_version", None)) or classify_by_agesa(image_agesa)
+        zen_gens = [inferred]
 
     # --- Directory magic (bytes → str) ---------------------------------------
     raw_magic = getattr(directory, "magic", None)
