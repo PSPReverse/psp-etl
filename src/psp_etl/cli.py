@@ -32,6 +32,7 @@ from psp_etl.scrape.asus_server import AsusServerScraper
 from psp_etl.scrape.base import VendorScraper
 from psp_etl.scrape.gigabyte import GigabyteScraper
 from psp_etl.scrape.gigabyte_server import GigabyteServerScraper
+from psp_etl.scrape.lenovo import LenovoScraper
 from psp_etl.scrape.msi import MsiScraper
 from psp_etl.scrape.supermicro import SupermicroScraper
 from psp_etl.scrape.tyan import TyanScraper
@@ -45,6 +46,7 @@ _VENDOR_SCRAPERS: dict[str, type[VendorScraper]] = {
     "asus-server": AsusServerScraper,
     "gigabyte": GigabyteScraper,
     "gigabyte-server": GigabyteServerScraper,
+    "lenovo": LenovoScraper,
     "msi": MsiScraper,
     "supermicro": SupermicroScraper,
     "tyan": TyanScraper,
