@@ -8,12 +8,16 @@ import io
 import zipfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
+import pytest
 from bs4 import BeautifulSoup
 
 from psp_etl.scrape.base import BiosUpdate, BoardInfo
 from psp_etl.scrape.gigabyte_server import (
+    GigabyteServerCatalogError,
     GigabyteServerScraper,
     _extract_server_version_from_url,
+    _looks_like_challenge,
     _slug_to_model,
     _socket_for_model,
 )
@@ -424,3 +428,292 @@ def test_gigabyte_server_scraper_default_sockets():
 def test_gigabyte_server_scraper_custom_sockets():
     scraper = GigabyteServerScraper(sockets=["SP5"])
     assert scraper.sockets == ["SP5"]
+
+
+# ---------------------------------------------------------------------------
+# Challenge detection
+# ---------------------------------------------------------------------------
+
+
+def test_looks_like_challenge_pardon_our_interruption():
+    html = (
+        "<html><body><h1>Pardon Our Interruption</h1>"
+        "<p>As you were browsing, something about your browser made us think "
+        "you were a bot.</p></body></html>"
+    )
+    assert _looks_like_challenge(html) is True
+
+
+def test_looks_like_challenge_akamai_token():
+    html = (
+        "<html><head><script>var x = '/_sec/cp_challenge/foo';</script>"
+        "</head><body>" + ("padding " * 1000) + "</body></html>"
+    )
+    assert _looks_like_challenge(html) is True
+
+
+def test_looks_like_challenge_short_response_treated_as_challenge():
+    # Tiny 200 response is not a real catalog grid.
+    assert _looks_like_challenge("<html><body>tiny</body></html>") is True
+
+
+def test_looks_like_challenge_real_catalog_html_not_flagged():
+    # > 4 KiB of catalog-shaped markup with no challenge tokens.
+    html = (
+        "<html><body>"
+        + "<div class='product'><a href='/Enterprise/Server-Motherboard/X-rev-10'>X</a></div>" * 200
+        + "</body></html>"
+    )
+    assert len(html) > 4096
+    assert _looks_like_challenge(html) is False
+
+
+# ---------------------------------------------------------------------------
+# list_boards: failure & fallback paths
+# ---------------------------------------------------------------------------
+
+
+_WAYBACK_BOARDS = [
+    BoardInfo(
+        vendor="Gigabyte",
+        model="MZ31-AR0",
+        socket="SP3",
+        url="https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ31-AR0-rev-3x/support",
+    ),
+    BoardInfo(
+        vendor="Gigabyte",
+        model="MZ32-AR0",
+        socket="SP3",
+        url="https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ32-AR0-rev-30/support",
+    ),
+    BoardInfo(
+        vendor="Gigabyte",
+        model="MZ33-AR0",
+        socket="SP5",
+        url="https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ33-AR0-rev-1x/support",
+    ),
+    BoardInfo(
+        vendor="Gigabyte",
+        model="MZ72-HB0",
+        socket="SP3",
+        url="https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ72-HB0-rev-30/support",
+    ),
+    BoardInfo(
+        vendor="Gigabyte",
+        model="MZ73-LM0",
+        socket="SP5",
+        url="https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ73-LM0-rev-3x/support",
+    ),
+    BoardInfo(
+        vendor="Gigabyte",
+        model="MZ34-AR0",
+        socket="SP6",
+        url="https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ34-AR0-rev-10/support",
+    ),
+]
+
+
+def _http_error(status_code: int) -> httpx.HTTPStatusError:
+    request = httpx.Request("GET", "https://www.gigabyte.com/Enterprise/Server-Motherboard")
+    response = httpx.Response(status_code=status_code, request=request)
+    return httpx.HTTPStatusError(f"HTTP {status_code}", request=request, response=response)
+
+
+def test_list_boards_falls_back_to_wayback_on_403():
+    scraper = GigabyteServerScraper()
+    scraper._client = MagicMock()
+
+    with (
+        patch.object(scraper, "_get", new=AsyncMock(side_effect=_http_error(403))),
+        patch.object(
+            scraper,
+            "_wayback_fallback",
+            new=AsyncMock(return_value=list(_WAYBACK_BOARDS)),
+        ),
+    ):
+        boards = asyncio.run(scraper.list_boards())
+
+    models = {b.model for b in boards}
+    assert {"MZ31-AR0", "MZ32-AR0", "MZ33-AR0", "MZ72-HB0", "MZ73-LM0"} <= models
+
+
+def test_list_boards_falls_back_to_wayback_on_challenge_html():
+    challenge_html = "<html><body><h1>Pardon Our Interruption</h1><p>...</p></body></html>"
+    scraper = GigabyteServerScraper()
+    scraper._client = MagicMock()
+
+    mock_response = MagicMock()
+    mock_response.text = challenge_html
+    mock_response.status_code = 200
+
+    with (
+        patch.object(scraper, "_get", new=AsyncMock(return_value=mock_response)),
+        patch.object(
+            scraper,
+            "_wayback_fallback",
+            new=AsyncMock(return_value=list(_WAYBACK_BOARDS)),
+        ),
+    ):
+        boards = asyncio.run(scraper.list_boards())
+
+    assert len(boards) >= 5
+    assert {"MZ31-AR0", "MZ72-HB0", "MZ73-LM0"} <= {b.model for b in boards}
+
+
+def test_list_boards_raises_on_real_html_with_zero_boards():
+    """A 200 response with non-challenge markup but no MZ links must fail loudly."""
+    # >4 KiB of plausible-looking HTML with no MZ links — markup change scenario.
+    benign_html = (
+        "<html><body>"
+        + "<div class='product'><a href='/Enterprise/Server-Motherboard/'>Coming soon</a></div>" * 200
+        + "</body></html>"
+    )
+    assert len(benign_html) > 4096
+    scraper = GigabyteServerScraper()
+    scraper._client = MagicMock()
+
+    mock_response = MagicMock()
+    mock_response.text = benign_html
+    mock_response.status_code = 200
+
+    with patch.object(scraper, "_get", new=AsyncMock(return_value=mock_response)):
+        with pytest.raises(GigabyteServerCatalogError, match="markup has likely changed"):
+            asyncio.run(scraper.list_boards())
+
+
+def test_list_boards_raises_when_live_blocked_and_wayback_empty():
+    scraper = GigabyteServerScraper()
+    scraper._client = MagicMock()
+
+    with (
+        patch.object(scraper, "_get", new=AsyncMock(side_effect=_http_error(403))),
+        patch.object(scraper, "_wayback_fallback", new=AsyncMock(return_value=[])),
+    ):
+        with pytest.raises(GigabyteServerCatalogError, match="Wayback CDX"):
+            asyncio.run(scraper.list_boards())
+
+
+def test_list_boards_socket_filter_applies_to_wayback_boards():
+    scraper = GigabyteServerScraper(sockets=["SP5"])
+    scraper._client = MagicMock()
+
+    with (
+        patch.object(scraper, "_get", new=AsyncMock(side_effect=_http_error(403))),
+        patch.object(
+            scraper,
+            "_wayback_fallback",
+            new=AsyncMock(return_value=list(_WAYBACK_BOARDS)),
+        ),
+    ):
+        boards = asyncio.run(scraper.list_boards())
+
+    assert {b.socket for b in boards} == {"SP5"}
+
+
+# ---------------------------------------------------------------------------
+# _wayback_fallback: CDX parsing
+# ---------------------------------------------------------------------------
+
+
+_CDX_RESPONSE_JSON = [
+    ["original"],
+    ["https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ31-AR0-rev-3x"],
+    ["https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ31-AR0-rev-3x/support"],
+    ["https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ32-AR0-rev-30"],
+    ["https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ33-AR0-rev-1x-3x"],
+    ["https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ34-AR0-rev-10"],
+    ["https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ72-HB0-rev-30"],
+    ["https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ73-LM0-rev-3x"],
+    ["https://www.gigabyte.com/Enterprise/Server-Motherboard/MZ99-XYZ-rev-10"],  # unknown socket, dropped
+]
+
+
+def test_wayback_fallback_parses_cdx_response():
+    scraper = GigabyteServerScraper()
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.json = MagicMock(return_value=_CDX_RESPONSE_JSON)
+    mock_response.raise_for_status = MagicMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    boards = asyncio.run(scraper._wayback_fallback(mock_client))
+    models = {b.model for b in boards}
+
+    assert {"MZ31-AR0", "MZ32-AR0", "MZ33-AR0", "MZ34-AR0", "MZ72-HB0", "MZ73-LM0"} <= models
+    assert "MZ99-XYZ" not in models  # unknown socket prefix dropped
+
+
+def test_wayback_fallback_dedupes_by_slug():
+    scraper = GigabyteServerScraper()
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.json = MagicMock(return_value=_CDX_RESPONSE_JSON)
+    mock_response.raise_for_status = MagicMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    boards = asyncio.run(scraper._wayback_fallback(mock_client))
+    # MZ31-AR0-rev-3x appears twice (with and without /support) — should dedupe.
+    mz31_count = sum(1 for b in boards if b.model == "MZ31-AR0")
+    assert mz31_count == 1
+
+
+def test_wayback_fallback_assigns_correct_sockets():
+    scraper = GigabyteServerScraper()
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.json = MagicMock(return_value=_CDX_RESPONSE_JSON)
+    mock_response.raise_for_status = MagicMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    by_model = {b.model: b for b in asyncio.run(scraper._wayback_fallback(mock_client))}
+    assert by_model["MZ31-AR0"].socket == "SP3"
+    assert by_model["MZ33-AR0"].socket == "SP5"
+    assert by_model["MZ34-AR0"].socket == "SP6"
+    assert by_model["MZ73-LM0"].socket == "SP5"
+
+
+def test_wayback_fallback_returns_support_urls():
+    scraper = GigabyteServerScraper()
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.json = MagicMock(return_value=_CDX_RESPONSE_JSON)
+    mock_response.raise_for_status = MagicMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    for board in asyncio.run(scraper._wayback_fallback(mock_client)):
+        assert board.url.startswith("https://www.gigabyte.com/Enterprise/Server-Motherboard/")
+        assert board.url.endswith("/support")
+
+
+def test_wayback_fallback_returns_empty_on_http_error():
+    scraper = GigabyteServerScraper()
+
+    mock_client = MagicMock()
+    mock_client.get = AsyncMock(side_effect=httpx.ConnectError("boom"))
+
+    boards = asyncio.run(scraper._wayback_fallback(mock_client))
+    assert boards == []
+
+
+def test_list_boards_uses_live_when_catalog_returns_boards():
+    """Sanity check: when live catalog works, Wayback is not invoked."""
+    scraper = GigabyteServerScraper()
+    scraper._client = MagicMock()
+
+    mock_response = MagicMock()
+    mock_response.text = CATALOG_HTML
+    mock_response.status_code = 200
+
+    wayback_mock = AsyncMock(return_value=[])
+    with (
+        patch.object(scraper, "_get", new=AsyncMock(return_value=mock_response)),
+        patch.object(scraper, "_wayback_fallback", new=wayback_mock),
+    ):
+        boards = asyncio.run(scraper.list_boards())
+
+    assert len(boards) > 0
+    wayback_mock.assert_not_awaited()

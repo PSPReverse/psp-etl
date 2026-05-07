@@ -42,6 +42,35 @@ logger = logging.getLogger(__name__)
 
 _CATALOG_URL = "https://www.gigabyte.com/Enterprise/Server-Motherboard?fid=2816"
 
+_WAYBACK_CDX_API = "https://web.archive.org/cdx/search/cdx"
+_WAYBACK_CDX_PREFIX = "gigabyte.com/Enterprise/Server-Motherboard/MZ"
+
+# Substrings that identify an Akamai bot-challenge / interstitial page. The
+# live catalog is fronted by Akamai Bot Manager, which serves a generic
+# challenge HTML when a request is judged non-human. None of these tokens
+# appear in the legitimate product-catalog markup, so a hit means the request
+# was blocked even though the HTTP status was 200.
+_AKAMAI_CHALLENGE_TOKENS: tuple[str, ...] = (
+    "Pardon Our Interruption",
+    "Reference&#32;&#35;",
+    "Reference #",
+    "_Incapsula_Resource",
+    "ak_bmsc",
+    "Akamai Bot Manager",
+    "challenge-platform",
+    "/_sec/cp_challenge/",
+)
+
+
+class GigabyteServerCatalogError(RuntimeError):
+    """Raised when the server catalog cannot be enumerated.
+
+    Distinguishes a confirmed silent failure (live catalog blocked AND
+    Wayback fallback empty, or live catalog returned a 200 page that did
+    not parse to any boards) from an ordinary transient HTTP error.
+    """
+
+
 # MZ-series model prefix → CPU socket family.
 # Order matters only for documentation; prefixes do not overlap.
 _SOCKET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -56,6 +85,23 @@ _SOCKET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 _ALL_SERVER_SOCKETS: tuple[str, ...] = ("SP3", "SP5", "SP6")
+
+
+def _looks_like_challenge(html: str) -> bool:
+    """Return True if the HTML response looks like an Akamai bot challenge.
+
+    The live catalog returns a generic interstitial page when the request is
+    classified as non-human; the page is a 200 with no product cards. We
+    treat the response as a challenge whenever a known marker appears, OR
+    when the body is so small (< 4 KiB) that it cannot plausibly contain the
+    catalog grid. That conservative size heuristic catches Akamai variants
+    that omit the well-known tokens.
+    """
+    if any(token in html for token in _AKAMAI_CHALLENGE_TOKENS):
+        return True
+    if len(html) < 4096:
+        return True
+    return False
 
 
 def _socket_for_model(model: str) -> str | None:
@@ -120,23 +166,125 @@ class GigabyteServerScraper(GigabyteScraper):
         self._own_client = client is None
 
     async def list_boards(self) -> list[BoardInfo]:
-        """Enumerate all AMD EPYC MZ-series Gigabyte server motherboards."""
+        """Enumerate all AMD EPYC MZ-series Gigabyte server motherboards.
+
+        Strategy:
+          1. Fetch the live Akamai-fronted catalog. From residential IPs this
+             returns the full product grid; from datacenter IPs it typically
+             returns 403 or a bot-challenge page.
+          2. If the live attempt fails (HTTP error or challenge HTML), fall
+             back to Wayback CDX, which has good coverage of MZ-prefix per-
+             board pages.
+          3. If the live attempt returns a real-looking 200 but parses to 0
+             boards, raise loudly — the markup has changed and the parser
+             needs an update. Silent empty returns are no longer possible.
+        """
         client = self._require_client()
+        boards: list[BoardInfo] = []
+        live_failure: str | None = None
+
         try:
             resp = await self._get(client, _CATALOG_URL)
         except httpx.HTTPStatusError as exc:
-            logger.error(
-                "Failed to list Gigabyte server boards: HTTP %d",
-                exc.response.status_code,
+            live_failure = f"HTTP {exc.response.status_code}"
+            logger.warning(
+                "Live Gigabyte server catalog returned %s (likely Akamai bot detection); falling back to Wayback CDX",
+                live_failure,
             )
-            return []
+        else:
+            soup = BeautifulSoup(resp.text, "html.parser")
+            boards = self._parse_board_list(soup)
+            if not boards:
+                if _looks_like_challenge(resp.text):
+                    live_failure = "Akamai bot-challenge page"
+                    logger.warning(
+                        "Live Gigabyte server catalog returned a bot-challenge page; falling back to Wayback CDX",
+                    )
+                else:
+                    raise GigabyteServerCatalogError(
+                        "Gigabyte server catalog returned a 200 response that parsed to 0 boards "
+                        "and does not look like an Akamai challenge — the product-card markup has "
+                        f"likely changed. Response length: {len(resp.text)} bytes."
+                    )
 
-        soup = BeautifulSoup(resp.text, "html.parser")
-        boards = self._parse_board_list(soup)
+        if live_failure is not None:
+            boards = await self._wayback_fallback(client)
+            if not boards:
+                raise GigabyteServerCatalogError(
+                    f"Live Gigabyte server catalog blocked ({live_failure}) and Wayback CDX "
+                    "fallback returned 0 MZ-prefix boards. Cannot enumerate the catalog."
+                )
 
         socket_filter = {s.upper() for s in self.sockets}
         boards = [b for b in boards if b.socket in socket_filter]
         logger.info("Found %d Gigabyte server boards", len(boards))
+        return boards
+
+    async def _wayback_fallback(self, client: httpx.AsyncClient) -> list[BoardInfo]:
+        """Enumerate MZ-prefix board slugs from the Wayback Machine CDX index.
+
+        The live catalog at gigabyte.com is Akamai-protected, but per-board
+        pages have been archived by the Wayback Machine. CDX indexes the
+        URLs (not the HTML), so we don't need to fetch any archived pages
+        — the slug alone is enough to recover ``(model, socket, support_url)``.
+
+        Returns boards in slug order; deduplicated by slug; filtered to
+        recognised MZ socket prefixes.
+        """
+        params = {
+            "url": f"{_WAYBACK_CDX_PREFIX}*",
+            "output": "json",
+            "fl": "original",
+            "filter": "statuscode:200",
+            "collapse": "urlkey",
+            "limit": "10000",
+        }
+        try:
+            resp = await client.get(_WAYBACK_CDX_API, params=params)
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            logger.warning("Wayback CDX query for Gigabyte server boards failed: %s", exc)
+            return []
+
+        rows: list[list[str]] = resp.json()
+        if rows and rows[0] == ["original"]:
+            rows = rows[1:]
+
+        boards: list[BoardInfo] = []
+        seen: set[str] = set()
+        slug_re = re.compile(
+            r"/Enterprise/Server-Motherboard/(MZ[A-Za-z0-9]+-[A-Za-z0-9]+(?:-rev-[\dxX-]+)?)",
+            re.I,
+        )
+        for row in rows:
+            if not row:
+                continue
+            url = row[0]
+            match = slug_re.search(url)
+            if not match:
+                continue
+            slug = match.group(1)
+            if slug in seen:
+                continue
+            seen.add(slug)
+
+            model = _slug_to_model(slug)
+            socket = _socket_for_model(model)
+            if socket is None:
+                logger.debug("Unknown socket for %s; skipping", model)
+                continue
+
+            support_url = f"{_BASE_URL}/Enterprise/Server-Motherboard/{slug}/support"
+            boards.append(
+                BoardInfo(
+                    vendor="Gigabyte",
+                    model=model,
+                    socket=socket,
+                    url=support_url,
+                )
+            )
+
+        logger.info("Wayback CDX fallback enumerated %d Gigabyte server boards", len(boards))
         return boards
 
     def _parse_board_list(self, soup: BeautifulSoup, _socket: str | None = None) -> list[BoardInfo]:  # type: ignore[override]
