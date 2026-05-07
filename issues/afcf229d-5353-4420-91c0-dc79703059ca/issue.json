@@ -1,0 +1,11 @@
+{
+  "uuid": "afcf229d-5353-4420-91c0-dc79703059ca",
+  "display_id": 99,
+  "title": "Scraper bug: Gigabyte server returns 0 boards silently",
+  "description": "Steps to reproduce:\n1. \n\nExpected: \nActual: \n\nThe Gigabyte server scraper (CL-83) runs to completion without raising any\nexceptions, but `list_boards()` returns an empty list, so `psp-etl scrape\ngigabyte-server` produces 0 ROMs and 0 errors — silent failure.\n\n## Likely root cause\n\nGigabyte's enterprise catalog at\nhttps://www.gigabyte.com/Enterprise/Server-Motherboard?fid=2816 is fronted by\nAkamai (same WAF as the consumer www.gigabyte.com). The scraper's parser likely\nruns against an Akamai bot-challenge HTML page that doesn't contain product\ncards, so the BeautifulSoup extraction finds 0 entries and quietly returns [].\n\n## Fix\n\n1. Add a sanity assertion in `list_boards()` that fails loudly if the parsed\n   page has 0 product cards AND no recognizable Akamai challenge marker — at\n   least we'll know detection is broken vs. catalog truly empty.\n2. Reuse the consumer Gigabyte scraper's _HEADERS dict end-to-end (the CL-83\n   commit reuses Akamai-bypassing client plumbing but may not propagate\n   *every* sec-ch-ua header to enterprise.* requests).\n3. If still blocked: fall back to Wayback CDX against\n   `gigabyte.com/Enterprise/Server-Motherboard/MZ*-rev-*/support` (per-board\n   pages get archived).\n\n## Acceptance criteria\n\n- `uv run psp-etl scrape gigabyte-server --dry-run` lists at least 5 MZ-prefix\n  boards (MZ31-AR0, MZ32-AR0, MZ33-AR0, MZ72-HB0, MZ73-LM0 are known to exist\n  on the catalog)\n- silent empty-board-list failure is no longer possible\n\nRefs: CL-83.",
+  "status": "open",
+  "priority": "high",
+  "created_by": "driver",
+  "created_at": "2026-05-07T12:03:35.265109449Z",
+  "updated_at": "2026-05-07T12:03:35.265109449Z"
+}
