@@ -30,6 +30,7 @@ from psp_etl.scrape.asus import AsusScraper
 from psp_etl.scrape.base import VendorScraper
 from psp_etl.scrape.gigabyte import GigabyteScraper
 from psp_etl.scrape.msi import MsiScraper
+from psp_etl.scrape.tyan import TyanScraper
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ _VENDOR_SCRAPERS: dict[str, type[VendorScraper]] = {
     "asus": AsusScraper,
     "gigabyte": GigabyteScraper,
     "msi": MsiScraper,
+    "tyan": TyanScraper,
 }
 
 _DEFAULT_DATA_DIR = Path("data")
@@ -533,10 +535,13 @@ def best(
 
 
 @cli.command()
-@click.argument("vendor", type=click.Choice(["asrock", "gigabyte", "asus", "msi", "all"]))
+@click.argument("vendor", type=click.Choice(["asrock", "gigabyte", "asus", "msi", "tyan", "all"]))
 @click.option(
     "--socket",
-    type=click.Choice(["am4", "am5", "strx4", "str5", "swrx8", "swrx9", "all"]),
+    type=click.Choice(
+        ["am4", "am5", "strx4", "str5", "swrx8", "swrx9", "sp3", "sp5", "sp6", "all"],
+        case_sensitive=False,
+    ),
     default="all",
     help="Filter by CPU socket.",
 )
