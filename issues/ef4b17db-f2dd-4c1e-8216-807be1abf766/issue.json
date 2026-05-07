@@ -7,8 +7,9 @@
   "priority": "high",
   "created_by": "driver",
   "created_at": "2026-05-07T12:03:29.688908992Z",
-  "updated_at": "2026-05-07T12:03:31.575362820Z",
+  "updated_at": "2026-05-07T12:03:33.368371946Z",
   "labels": [
-    "bug"
+    "bug",
+    "scraper"
   ]
 }
