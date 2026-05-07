@@ -1,0 +1,11 @@
+{
+  "uuid": "d5eab388-a707-470f-81c8-1af951ce0d0f",
+  "display_id": 90,
+  "title": "Scraper: Extend ASRock to Threadripper / Threadripper Pro",
+  "description": "Goal: \n\nAcceptance criteria:\n- \n\nGoal: Extend the existing AsRockScraper to cover sTRX4 (Threadripper) and sWRX8 (Threadripper Pro) consumer-tier boards in addition to AM4/AM5.\n\nboard_class: Threadripper, ThreadripperPro.\n\nSockets:\n- sTRX4: TRX40 Creator, TRX40 Taichi\n- sTR5: TRX50 Nova, TRX50 Aqua (forthcoming Threadripper 9000 boards)\n- sWRX8: WRX80 Creator, WRX80D8-2T (overlap with ASRock Rack — this issue covers consumer-tier; rack covered by #84)\n- sWRX9: WRX90 WS EVO\n\nImplementation:\n- src/psp_etl/scrape/asrock.py uses Wayback CDX against download.asrock.com/BIOS/{socket}/* with a hardcoded _SOCKETS = ('AM4', 'AM5'). Audit the CDX index to see what additional folder names ASRock uses (likely 'TRX40', 'TRX50', 'WRX80', 'WRX90' — but verify).\n- Update the _SOCKETS tuple and the _BIOS_URL_RE regex (currently hardcoded to AM[45]).\n- Update classify_board_class mapping in src/psp_etl/ingest.py if any new socket names surface that aren't already there (sTRX4, sTR5, sWRX8 mapped; sWRX9 needs adding once ASRock publishes WRX90 boards).\n\nCoordination with #84 (ASRock Rack): both this issue and the Rack issue touch the same CDX. Decide ownership before both PRs land — recommend doing #84 first since the Rack inventory naturally surfaces what folder names exist for sWRX8/sWRX9.\n\nAcceptance criteria:\n- Existing AM4/AM5 tests still pass\n- New tests for at least one TRX40 and one WRX80 board URL parse\n- CDX coverage report (count of new boards discovered) in commit message\n\nRelated: #79, #81 (parent for Threadripper sockets).",
+  "status": "open",
+  "priority": "medium",
+  "created_by": "driver",
+  "created_at": "2026-05-07T07:04:02.231007595Z",
+  "updated_at": "2026-05-07T07:04:02.231007595Z"
+}
