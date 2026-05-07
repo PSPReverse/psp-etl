@@ -7,8 +7,9 @@
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-05-07T07:01:41.742554807Z",
-  "updated_at": "2026-05-07T07:01:43.587979761Z",
+  "updated_at": "2026-05-07T07:01:45.377399389Z",
   "labels": [
-    "feature"
+    "feature",
+    "scraper"
   ]
 }
