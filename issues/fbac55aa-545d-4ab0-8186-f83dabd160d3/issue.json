@@ -3,11 +3,12 @@
   "display_id": 97,
   "title": "Scraper bug: Dell DUP unwrap fails — 'PFS.HDR. magic not found'",
   "description": "Steps to reproduce:\n1. \n\nExpected: \nActual: \n\nThe Dell scraper (CL-88) successfully fetches the public Catalog.xml.gz, locates\nPowerEdge BIOS DUP URLs, and downloads them — but the DUP unwrap step crashes:\n\n    ValueError: Dell DUP: PFS.HDR. magic not found\n\nThis means 0 ROMs are added even though the catalog flow is working.\n\n## Root cause hypothesis\n\nThe DUP format Dell ships today is a Windows self-extracting EXE that wraps a PFS\n(Platform Firmware Storage) container. The current `unwrap_dell_dup()` looks for\nthe `PFS.HDR.` magic at a fixed offset that worked on older DUPs but not on the\ncurrent PE32+ wrapper (which has a longer header / different stub).\n\n## Fix proposals\n\n1. Search for `PFS.HDR.` magic anywhere in the file rather than at a fixed\n   offset (cheap, fixes most cases).\n2. Cross-check with platomav/BIOSUtilities `Dell PFS Update Extractor` — MIT\n   licensed, handles every Dell DUP/PFS variant in the wild. Either vendor that\n   code or shell out to the tool when present.\n3. As a fallback, accept that some Dell DUP variants are intractable and log\n   skip-with-reason for those.\n\n## Test data\n\nReproduce against the catalog entry for any current AMD PowerEdge:\n- R6515 / R6525 (Rome / Milan SP3)\n- R6615 / R6625 / R6715 (Genoa / Siena SP5/SP6)\n\n## Acceptance criteria\n\n- `uv run psp-etl scrape dell --limit 3` extracts at least 1 raw ROM successfully\n- DUP variants that genuinely fail to unwrap log a clear warning and continue\n  rather than aborting the whole scrape\n\nRefs: CL-88, [pk4tech/BIOSUtilities-Bios-Extractor](https://github.com/pk4tech/BIOSUtilities-Bios-Extractor) (format reference, license unspecified — read-only),\n[platomav/BIOSUtilities](https://github.com/platomav/BIOSUtilities) (MIT, code-adaptable).",
-  "status": "open",
+  "status": "closed",
   "priority": "high",
   "created_by": "driver",
   "created_at": "2026-05-07T12:03:23.985097687Z",
-  "updated_at": "2026-05-07T12:04:17.122424835Z",
+  "updated_at": "2026-05-07T12:41:46.664107237Z",
+  "closed_at": "2026-05-07T12:41:46.664107237Z",
   "labels": [
     "bug",
     "scraper"
