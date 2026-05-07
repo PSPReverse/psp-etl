@@ -3,11 +3,12 @@
   "display_id": 86,
   "title": "Scraper: Tyan (EPYC)",
   "description": "Goal: \n\nAcceptance criteria:\n- \n\nGoal: Scraper for Tyan server motherboards. Smaller catalog than the big-four server vendors but historically interesting — Tyan ships some EPYC reference designs and unusual SKUs (Transport HX, Tomcat HX/SX) that surface different AGESA/PSP build configurations.\n\nboard_class: EPYC.\n\nSockets/board families:\n- SP3: Tomcat HX S8030, Transport HX TN83-B8251, S8253 (Naples/Rome/Milan)\n- SP5: S8050, Tomcat HX S8055 (Genoa)\n\nAccess strategy:\n- Catalog: https://www.tyan.com/Motherboards_AMD_EPYC — lists all AMD EPYC server boards.\n- Per-board: each model has a /Solutions/Motherboards/{MODEL}#download tab with BIOS history.\n- No WAF observed historically, but verify before committing — if Cloudflare rolls out, plan for Wayback CDX fallback against download links served from Tyan's CDN.\n\nImplementation notes:\n- Smaller catalog (~10–15 active EPYC boards) means a hand-written list of model→download-URL mappings is acceptable as a starting point if the catalog HTML changes too often.\n- Scope is small enough that this is a good first-issue for a contributor — well-bounded and self-contained.\n\nAcceptance criteria:\n- Class at src/psp_etl/scrape/tyan.py\n- Tests with HTML fixtures for catalog + per-board pages\n- ZIP extraction handles Tyan's typical layout (raw .BIN alongside flash utility)\n- CLI registration\n\nRelated: #79, #81.",
-  "status": "open",
+  "status": "closed",
   "priority": "low",
   "created_by": "driver",
   "created_at": "2026-05-07T07:02:17.992764561Z",
-  "updated_at": "2026-05-07T07:06:10.752702405Z",
+  "updated_at": "2026-05-07T10:04:30.018251212Z",
+  "closed_at": "2026-05-07T10:04:30.018251212Z",
   "labels": [
     "feature",
     "scraper"
