@@ -3,11 +3,12 @@
   "display_id": 94,
   "title": "Research: Embedded vendor BIOS scraping feasibility (DFI, Advantech, IBASE, Sapphire, etc.)",
   "description": "Question: \n\nContext: \n\nFindings: \n\nQuestion: Is automated scraping of AMD Ryzen Embedded / EPYC Embedded board BIOSes feasible from any public source?\n\nContext:\n- BOARD_CLASSES tuple in src/psp_etl/ingest.py reserves an 'Embedded' value, but no scraper currently populates it. Only manual ROM ingest can set it today.\n- Embedded boards run AMD Ryzen Embedded (V1000/V2000/V3000, R1000/R2000) and EPYC Embedded (3000, 7000, 8004, 9004) parts — different microarchitecture lineage from consumer/server, often interesting from a PSP-firmware-divergence perspective.\n\nVendors to investigate:\n- DFI (https://www.dfi.com/) — large embedded-board catalog, AMD lineup includes COM-HPC modules and SBCs.\n- Advantech (https://www.advantech.com/) — login-required for many BIOSes.\n- IBASE (https://www.ibase.com.tw/) — AMD V-series industrial boards.\n- SECO (https://www.seco.com/) — Embedded systems integrator.\n- Sapphire (https://www.sapphiretech.com/) — IPC product line includes AMD EDGE-series.\n- Compulab (https://www.compulab.com/) — Fitlet / Airtop AMD systems.\n- Mini-ITX vendor pages (Asrock Rack actually counts here too — IMB-X1715 etc.).\n\nWhat to capture:\n- For each vendor: does the support portal require login? Is the BIOS download exposed via a stable URL? Are there CDN paths archived in Wayback?\n- Many embedded vendors use an authenticated 'partner portal' — those are out-of-scope.\n- Some vendors bundle BIOS into a 'BSP' tarball that also contains drivers; unwrapping is feasible but needs per-vendor format knowledge.\n\nOutcome:\n- A short comparison table (similar to #79's prior-art survey) capturing: portal type, auth requirement, archive coverage, BIOS package format, recommended access strategy or 'unsupported'.\n- File per-vendor follow-up scraper issues for the vendors where automated scraping is viable.\n- For vendors where it isn't viable, document in README as 'manual ingest only' and close.\n\nThis issue produces follow-up work, not code directly.\n\nRelated: #79.",
-  "status": "open",
+  "status": "closed",
   "priority": "low",
   "created_by": "driver",
   "created_at": "2026-05-07T07:05:15.570059997Z",
-  "updated_at": "2026-05-07T07:06:01.073621962Z",
+  "updated_at": "2026-05-07T10:51:23.202376209Z",
+  "closed_at": "2026-05-07T10:51:23.202376209Z",
   "labels": [
     "research",
     "scraper"
