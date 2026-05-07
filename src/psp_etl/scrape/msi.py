@@ -47,6 +47,13 @@ _URL_RE = re.compile(
 # Chipset keywords for socket detection (in board model names)
 _AM4_RE = re.compile(r"\b(X570|B550|B450|A520|X470|B350|X370|A320|B250|A300|B150)\b", re.IGNORECASE)
 _AM5_RE = re.compile(r"\b(X670E?|B650E?|A620|X870E?|B850|B840)\b", re.IGNORECASE)
+# Threadripper (HEDT) chipsets: TRX40 → sTRX4, TRX50 → sTR5
+_TR_RE = re.compile(r"\b(TRX40|TRX50)\b", re.IGNORECASE)
+# Threadripper Pro (workstation) chipset: WRX80 → sWRX8
+# (MSI does not currently ship a WRX80 board, but match for forward-compat.)
+_TR_PRO_RE = re.compile(r"\bWRX80\b", re.IGNORECASE)
+
+_TR_CHIPSET_TO_SOCKET = {"TRX40": "sTRX4", "TRX50": "sTR5"}
 
 # Parses model name from release notes: "MAG X570 TOMAHAWK WIFI(MS-7C84) V1.0 BIOS Release"
 _MODEL_RE = re.compile(
@@ -149,7 +156,7 @@ class MsiScraper(VendorScraper):
         the archive, which is sufficient to decompress the small release-notes
         TXT stored as the second local-file entry.
 
-        Returns None if the board is not AM4 or AM5.
+        Returns None if the board socket is not recognized.
         """
         if board_id in self._board_cache:
             return self._board_cache[board_id]
@@ -190,8 +197,12 @@ class MsiScraper(VendorScraper):
             socket = "AM5"
         elif _AM4_RE.search(model_name):
             socket = "AM4"
+        elif (tr_match := _TR_RE.search(model_name)) is not None:
+            socket = _TR_CHIPSET_TO_SOCKET[tr_match.group(1).upper()]
+        elif _TR_PRO_RE.search(model_name):
+            socket = "sWRX8"
         else:
-            logger.debug("Board %s (%s) is not AM4/AM5, skipping", board_id, model_name)
+            logger.debug("Board %s (%s) socket not recognized, skipping", board_id, model_name)
             return None
 
         logger.debug("Identified board %s → %s (%s)", board_id, model_name, socket)
@@ -203,7 +214,10 @@ class MsiScraper(VendorScraper):
     # ------------------------------------------------------------------
 
     async def list_boards(self) -> list[BoardInfo]:
-        """Enumerate all AM4/AM5 MSI motherboards via Wayback Machine CDX."""
+        """Enumerate AMD-socket MSI motherboards via Wayback Machine CDX.
+
+        Recognizes AM4, AM5, sTRX4, sTR5, and sWRX8 sockets.
+        """
         cdx = await self._fetch_cdx()
 
         boards: list[BoardInfo] = []
@@ -223,7 +237,7 @@ class MsiScraper(VendorScraper):
                 )
             )
 
-        logger.info("Found %d MSI AM4/AM5 boards", len(boards))
+        logger.info("Found %d MSI AMD boards", len(boards))
         return boards
 
     async def list_bios_updates(self, board: BoardInfo) -> list[BiosUpdate]:

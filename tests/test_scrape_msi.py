@@ -23,13 +23,22 @@ from psp_etl.scrape.msi import (
 
 _AM4_TXT = "MAG X570 TOMAHAWK WIFI(MS-7C84) V1.0 BIOS Release\r\n"
 _AM5_TXT = "MEG X670E ACE(MS-7D67) V1.0 BIOS Release\r\n"
+_TRX40_TXT = "Creator TRX40(MS-7C59) V1.0 BIOS Release\r\n"
+_TRX50_TXT = "MEG TRX50 ACE(MS-7E07) V1.0 BIOS Release\r\n"
+_WRX80_TXT = "WRX80 PRO(MS-7C00) V1.0 BIOS Release\r\n"
 
 _CDX_RESPONSE = [
     ["original"],
     ["https://download.msi.com/bos_exe/mb/7C84v10.zip"],
     ["https://download.msi.com/bos_exe/mb/7C84v11.zip"],
     ["https://download.msi.com/bos_exe/mb/7D67v1A.zip"],
-    ["https://download.msi.com/bos_exe/mb/0000v1.zip"],  # not AM4/AM5 → filtered
+    ["https://download.msi.com/bos_exe/mb/0000v1.zip"],  # unrecognized socket → filtered
+]
+
+_TR_CDX_RESPONSE = [
+    ["original"],
+    ["https://download.msi.com/bos_exe/mb/7C59v10.zip"],  # TRX40 (sTRX4)
+    ["https://download.msi.com/bos_exe/mb/7E07v10.zip"],  # TRX50 (sTR5)
 ]
 
 
@@ -323,6 +332,72 @@ def test_list_boards_empty_cdx():
         scraper = MsiScraper(client=client)
         boards = await scraper.list_boards()
         assert boards == []
+
+    asyncio.run(_run())
+
+
+_TR_RANGE = {
+    "https://download-2.msi.com/bos_exe/mb/7C59v10.zip": _make_zip_partial(_TRX40_TXT, "7C59", "10"),
+    "https://download-2.msi.com/bos_exe/mb/7E07v10.zip": _make_zip_partial(_TRX50_TXT, "7E07", "10"),
+}
+
+
+def test_list_boards_detects_trx40_as_strx4():
+    async def _run():
+        client = _make_mock_client(cdx_data=_TR_CDX_RESPONSE, range_data=_TR_RANGE)
+        scraper = MsiScraper(client=client)
+        boards = await scraper.list_boards()
+        strx4 = [b for b in boards if b.socket == "sTRX4"]
+        assert len(strx4) == 1
+        assert "TRX40" in strx4[0].model
+
+    asyncio.run(_run())
+
+
+def test_list_boards_detects_trx50_as_str5():
+    async def _run():
+        client = _make_mock_client(cdx_data=_TR_CDX_RESPONSE, range_data=_TR_RANGE)
+        scraper = MsiScraper(client=client)
+        boards = await scraper.list_boards()
+        str5 = [b for b in boards if b.socket == "sTR5"]
+        assert len(str5) == 1
+        assert "TRX50" in str5[0].model
+
+    asyncio.run(_run())
+
+
+def test_list_boards_detects_wrx80_as_swrx8():
+    async def _run():
+        cdx = [["original"], ["https://download.msi.com/bos_exe/mb/7C00v10.zip"]]
+        range_data = {
+            "https://download-2.msi.com/bos_exe/mb/7C00v10.zip": _make_zip_partial(_WRX80_TXT, "7C00", "10"),
+        }
+        client = _make_mock_client(cdx_data=cdx, range_data=range_data)
+        scraper = MsiScraper(client=client)
+        boards = await scraper.list_boards()
+        swrx8 = [b for b in boards if b.socket == "sWRX8"]
+        assert len(swrx8) == 1
+
+    asyncio.run(_run())
+
+
+def test_list_boards_mixed_sockets_all_present():
+    """A CDX containing AM4, AM5, TRX40, and TRX50 should yield all four sockets."""
+
+    async def _run():
+        cdx = [
+            ["original"],
+            ["https://download.msi.com/bos_exe/mb/7C84v10.zip"],  # AM4
+            ["https://download.msi.com/bos_exe/mb/7D67v1A.zip"],  # AM5
+            ["https://download.msi.com/bos_exe/mb/7C59v10.zip"],  # sTRX4
+            ["https://download.msi.com/bos_exe/mb/7E07v10.zip"],  # sTR5
+        ]
+        range_data = {**_ALL_RANGE, **_TR_RANGE}
+        client = _make_mock_client(cdx_data=cdx, range_data=range_data)
+        scraper = MsiScraper(client=client)
+        boards = await scraper.list_boards()
+        sockets = {b.socket for b in boards}
+        assert sockets == {"AM4", "AM5", "sTRX4", "sTR5"}
 
     asyncio.run(_run())
 
