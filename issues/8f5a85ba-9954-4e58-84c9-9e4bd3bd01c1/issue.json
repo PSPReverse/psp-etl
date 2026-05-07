@@ -3,11 +3,12 @@
   "display_id": 84,
   "title": "Scraper: ASRock Rack (EPYC + WRX80)",
   "description": "Goal: \n\nAcceptance criteria:\n- \n\nGoal: Scraper for ASRock Rack server motherboards. Distinct corporate entity from consumer ASRock — separate product hierarchy on asrockrack.com but **sharing the same download.asrock.com CDN** as consumer ASRock. Confirmed in survey: consumer scraper's Wayback CDX query captures ASRock Rack BIOSes too, just under different socket folder names.\n\nboard_class: EPYC (primary), ThreadripperPro (WRX80D8-2T, WRX80-RUDI, etc.).\n\nSockets/board families to cover:\n- SP3: ROMED8-2T, ROMED8U-2T, EPYCD8-2T, ROMED4ID-2T (Naples/Rome/Milan boards)\n- SP5: GENOAD8UD-2T/X550, GENOAD24QM3, GENOAD16TX (Genoa/Bergamo)\n- SP6: SIENA-D8 family (Siena)\n- sWRX8: WRX80D8-2T, WRX80-RUDI (Threadripper Pro)\n- sWRX9 (forthcoming): WRX90 boards\n\nAccess strategy:\n- Front-end www.asrockrack.com is protected by **Imperva Incapsula** (confirmed during survey — page returned a JS challenge body). Direct scraping is blocked.\n- The ASRock CDN at download.asrock.com is *not* WAF-protected and serves both consumer and Rack BIOSes. Wayback CDX query against download.asrock.com/BIOS/* should already return Rack URLs that the consumer scraper currently filters out (only AM4/AM5 socket regex matches today).\n- **First task**: run the existing AsRockScraper CDX query without the AM4/AM5 socket filter and inventory which folder names ASRock uses for Rack boards (e.g. SP3, SP5, sWRX80, GENOA, SIENA). Outcome of that inventory drives the parser.\n- Fallback if Rack boards live under a separate CDN tree: Wayback CDX against asrockrack.com/sites/default/files/* (typical Drupal upload path) plus download.asrockrack.com.\n\nImplementation notes:\n- Strongly recommend a *generalised* AsRockScraper that takes a (socket, board_class) → folder-pattern map, rather than a separate class. The discovery and unwrapping logic is identical to consumer ASRock. Same ZIP layout, same naming.\n- Board model names on Rack URLs are unambiguous (ROMED8-2T, GENOAD8UD-2T, WRX80D8-2T) — no chipset-keyword heuristic needed.\n\nLicense-safe references: none in surveyed prior art covers ASRock Rack.\n\nAcceptance criteria:\n- Either generalisation of AsRockScraper or new src/psp_etl/scrape/asrock_rack.py\n- CDX inventory documented in commit message or docstring (which folder names exist)\n- Tests covering the folder-name → socket mapping\n- classify_board_class returns EPYC for SP3/SP5/SP6, ThreadripperPro for sWRX8 (already wired)\n- CLI registration\n\nRelated: #79, #81.",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-05-07T07:01:41.742554807Z",
-  "updated_at": "2026-05-07T07:06:18.382112768Z",
+  "updated_at": "2026-05-07T10:10:45.082851294Z",
+  "closed_at": "2026-05-07T10:10:45.082851294Z",
   "labels": [
     "feature",
     "scraper"
