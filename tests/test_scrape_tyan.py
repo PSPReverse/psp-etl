@@ -516,9 +516,42 @@ def test_download_creates_dest_dir(tmp_path):
     asyncio.run(_run())
 
 
-def test_download_http_error_raises(tmp_path):
+def test_download_404_returns_none_and_warns(tmp_path, caplog):
+    """A 404 on the constructed CDN URL must skip-with-warn, not crash.
+
+    MiTAC's catalog occasionally lists a BIOS title whose ZIP filename
+    deviates from the deterministic ``{title}.zip`` pattern. Crashing on
+    the first such mismatch loses every board scheduled after it, so a
+    single 404 must instead log a warning and return ``None``.
+    """
+
     async def _get(url, **kwargs):
         return _response(404, url=url)
+
+    mock = AsyncMock()
+    mock.get = _get
+
+    async def _run():
+        scraper = TyanScraper(client=mock, rate_limit=0)
+        update = _fake_update(model="S8056GM2NE-2T", version="V2.03")
+        with caplog.at_level("WARNING", logger="psp_etl.scrape.tyan"):
+            result = await scraper.download(update, tmp_path)
+        assert result is None
+        warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+        assert warnings, "expected a WARNING log on 404"
+        msg = warnings[-1].getMessage()
+        assert "S8056GM2NE-2T" in msg
+        assert "V2.03" in msg
+        assert update.download_url in msg
+
+    asyncio.run(_run())
+
+
+def test_download_non_404_http_error_propagates(tmp_path):
+    """Non-404 errors (e.g. 500) must still raise so real outages aren't masked."""
+
+    async def _get(url, **kwargs):
+        return _response(500, url=url)
 
     mock = AsyncMock()
     mock.get = _get

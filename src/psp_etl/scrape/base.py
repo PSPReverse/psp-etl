@@ -46,5 +46,10 @@ class VendorScraper(ABC):
         """List all available BIOS updates for a board."""
 
     @abstractmethod
-    async def download(self, update: BiosUpdate, dest_dir: Path) -> Path:
-        """Download and unwrap a BIOS update, return path to raw ROM."""
+    async def download(self, update: BiosUpdate, dest_dir: Path) -> Path | None:
+        """Download and unwrap a BIOS update, return path to raw ROM.
+
+        Returning ``None`` signals that this single update should be skipped
+        (e.g. the vendor's CDN returned 404 for a deterministically-constructed
+        URL). The orchestrator continues with the next update.
+        """

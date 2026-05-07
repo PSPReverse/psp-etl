@@ -214,8 +214,15 @@ class TyanScraper(VendorScraper):
     # Download
     # ------------------------------------------------------------------
 
-    async def download(self, update: BiosUpdate, dest_dir: Path) -> Path:
-        """Download a Tyan BIOS ZIP and extract the raw ROM image."""
+    async def download(self, update: BiosUpdate, dest_dir: Path) -> Path | None:
+        """Download a Tyan BIOS ZIP and extract the raw ROM image.
+
+        Returns ``None`` when the constructed CDN URL 404s. MiTAC's filename
+        convention occasionally deviates from the catalog title, and we'd
+        rather skip the offending update than crash mid-scrape and lose every
+        subsequent board. Other HTTP errors propagate so genuine outages
+        aren't silently swallowed.
+        """
         client = self._require_client()
         dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -227,7 +234,18 @@ class TyanScraper(VendorScraper):
         )
         await self._throttle()
         resp = await client.get(update.download_url)
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                logger.warning(
+                    "Tyan %s %s: BIOS ZIP not found at %s (HTTP 404), skipping",
+                    update.board.model,
+                    update.bios_version,
+                    update.download_url,
+                )
+                return None
+            raise
 
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
             path = extract_rom(zf, dest_dir, update)

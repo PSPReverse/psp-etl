@@ -644,6 +644,12 @@ async def _scrape_async(
                             continue
                         with tempfile.TemporaryDirectory() as tmp:
                             rom_path = await scraper.download(update, Path(tmp))
+                            if rom_path is None:
+                                console.print(
+                                    f"  [yellow]SKIP[/yellow] {board.model} "
+                                    f"v{update.bios_version} (download unavailable)"
+                                )
+                                continue
                             rom_bytes = rom_path.read_bytes()
                             sha256 = hashlib.sha256(rom_bytes).hexdigest()
                             if db.get_image_by_sha256(sha256) is not None:
