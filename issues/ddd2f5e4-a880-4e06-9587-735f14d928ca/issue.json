@@ -3,11 +3,12 @@
   "display_id": 93,
   "title": "Scraper: Extend MSI to Threadripper / Threadripper Pro",
   "description": "Goal: \n\nAcceptance criteria:\n- \n\nGoal: Extend the existing MsiScraper to cover sTRX4, sTR5, and possibly sWRX8 MSI Creator-line boards.\n\nboard_class: Threadripper, ThreadripperPro (limited — MSI's WRX80 catalog is small).\n\nMSI boards in scope:\n- sTRX4: Creator TRX40, TRX40 PRO WIFI\n- sTR5: Creator TRX50 (forthcoming)\n- sWRX8: MSI does not currently ship a WRX80 board, skip unless one appears\n\nImplementation:\n- src/psp_etl/scrape/msi.py uses Wayback CDX against download.msi.com/bos_exe/mb/* — no socket filter at the URL level, every board ID is enumerated.\n- The socket filter is in `_AM4_RE` / `_AM5_RE` chipset regexes inside `_identify_board`. Boards not matching either are dropped (`return None`).\n- Add a `_TR_RE` for TRX40 / TRX50 chipset tokens and a `_TR_PRO_RE` for WRX80, then return the matching socket name.\n- `classify_board_class` in ingest.py already maps sTRX4/sTR5/sWRX8 → Threadripper/ThreadripperPro.\n\nThis is the **simplest** of the four extension issues — MSI's range-request board-identification approach already enumerates every board on the CDN, so the change is just regex updates plus a socket-name decision (TRX40 → sTRX4, TRX50 → sTR5).\n\nAcceptance criteria:\n- Existing AM4/AM5 tests pass\n- New tests for one TRX40 board enumerate via CDX and return socket=sTRX4\n- Updated regexes documented in code comments\n\nRelated: #79, #81.",
-  "status": "open",
+  "status": "closed",
   "priority": "medium",
   "created_by": "driver",
   "created_at": "2026-05-07T07:04:54.976044074Z",
-  "updated_at": "2026-05-07T07:05:59.017344254Z",
+  "updated_at": "2026-05-07T10:02:45.468378078Z",
+  "closed_at": "2026-05-07T10:02:45.468378078Z",
   "labels": [
     "feature",
     "scraper"
