@@ -32,6 +32,7 @@ from psp_etl.scrape.base import VendorScraper
 from psp_etl.scrape.gigabyte import GigabyteScraper
 from psp_etl.scrape.gigabyte_server import GigabyteServerScraper
 from psp_etl.scrape.msi import MsiScraper
+from psp_etl.scrape.supermicro import SupermicroScraper
 from psp_etl.scrape.tyan import TyanScraper
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ _VENDOR_SCRAPERS: dict[str, type[VendorScraper]] = {
     "gigabyte": GigabyteScraper,
     "gigabyte-server": GigabyteServerScraper,
     "msi": MsiScraper,
+    "supermicro": SupermicroScraper,
     "tyan": TyanScraper,
 }
 
@@ -541,7 +543,9 @@ def best(
 @cli.command()
 @click.argument(
     "vendor",
-    type=click.Choice(["asrock", "gigabyte", "gigabyte-server", "asus", "asus-server", "msi", "tyan", "all"]),
+    type=click.Choice(
+        ["asrock", "gigabyte", "gigabyte-server", "asus", "asus-server", "msi", "supermicro", "tyan", "all"],
+    ),
 )
 @click.option(
     "--socket",

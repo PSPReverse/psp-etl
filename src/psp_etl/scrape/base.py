@@ -9,7 +9,7 @@ from pathlib import Path
 class BoardInfo:
     vendor: str
     model: str
-    socket: str  # 'AM4' or 'AM5'
+    socket: str  # 'AM4', 'AM5', 'SP3', 'SP5', 'SP6', 'sWRX8', 'sWRX9'
     url: str  # vendor support page URL
 
 
