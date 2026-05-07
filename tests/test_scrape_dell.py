@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import gzip
+import zlib
 
 import httpx
 import pytest
@@ -21,6 +22,12 @@ from psp_etl.scrape.dell import (
     parse_catalog,
     unwrap_dell_dup,
 )
+
+# Marker that wraps a Dell DUP zlib firmware/utilities section. See
+# psp_etl.scrape.dell._DELL_ZLIB_SECTION_RE for the layout.
+_DELL_ZLIB_SECTION_MAGIC = b"\xee\xaa\x76\x1b\xec\xbb\x20\xf1\xe6\x51"
+_DELL_FW_TYPE = 0xAA
+_DELL_UTIL_TYPE = 0xBB
 
 # ---------------------------------------------------------------------------
 # Socket classifier
@@ -220,6 +227,63 @@ def test_unwrap_dell_dup_raises_when_no_amd_entry() -> None:
     pfs = _build_pfs_blob([_build_pfs_entry(b"intel-bios-payload" * 100)])
     with pytest.raises(ValueError, match="no PFS entry"):
         unwrap_dell_dup(pfs)
+
+
+def _build_dell_zlib_section(payload: bytes, *, section_type: int) -> bytes:
+    """Wrap *payload* in a Dell DUP zlib section (size + type + magic + checksum)."""
+    compressed = zlib.compress(payload)
+    return (
+        len(compressed).to_bytes(4, "little")
+        + bytes([section_type])
+        + _DELL_ZLIB_SECTION_MAGIC
+        + b"\x00"  # checksum byte (ignored on read)
+        + compressed
+    )
+
+
+def test_unwrap_dell_dup_handles_zlib_compressed_pfs_section() -> None:
+    rom = b"\x00" * 4096 + b"$PSP" + b"\xab" * 8192 + b"$BHD" + b"\xff" * 4096
+    pfs = _build_pfs_blob([_build_pfs_entry(rom)])
+    fw_section = _build_dell_zlib_section(pfs, section_type=_DELL_FW_TYPE)
+    # Embed in a fake PE32+ wrapper; the raw bytes do NOT contain PFS.HDR.
+    dup = b"MZ" + b"\x00" * 4096 + fw_section + b"trailing junk"
+    assert PFS_HEADER_MAGIC not in b"MZ" + b"\x00" * 4096
+    assert unwrap_dell_dup(dup) == rom
+
+
+def test_unwrap_dell_dup_picks_largest_amd_entry_across_zlib_sections() -> None:
+    small_rom = b"$PSP" + b"\x11" * 1024
+    large_rom = b"\x00" * 1024 + b"$BHD" + b"\x22" * 32768
+    small_pfs = _build_pfs_blob([_build_pfs_entry(small_rom)])
+    large_pfs = _build_pfs_blob([_build_pfs_entry(large_rom)])
+    dup = (
+        b"MZ"
+        + b"\x00" * 256
+        + _build_dell_zlib_section(small_pfs, section_type=_DELL_FW_TYPE)
+        + b"\x00" * 64
+        + _build_dell_zlib_section(large_pfs, section_type=_DELL_FW_TYPE)
+    )
+    assert unwrap_dell_dup(dup) == large_rom
+
+
+def test_unwrap_dell_dup_skips_utilities_section() -> None:
+    # Utilities sections (type 0xBB) carry installer scripts, not BIOS — even
+    # if their decompressed body parses as a PFS volume with PSP-shaped bytes,
+    # we must not return it.
+    rom = b"$PSP" + b"\xab" * 256
+    pfs = _build_pfs_blob([_build_pfs_entry(rom)])
+    util_section = _build_dell_zlib_section(pfs, section_type=_DELL_UTIL_TYPE)
+    dup = b"MZ" + b"\x00" * 1024 + util_section
+    with pytest.raises(ValueError, match=r"PFS\.HDR"):
+        unwrap_dell_dup(dup)
+
+
+def test_unwrap_dell_dup_falls_through_when_zlib_section_has_no_amd_entry() -> None:
+    pfs = _build_pfs_blob([_build_pfs_entry(b"intel-bios-payload" * 100)])
+    fw_section = _build_dell_zlib_section(pfs, section_type=_DELL_FW_TYPE)
+    dup = b"MZ" + b"\x00" * 256 + fw_section
+    with pytest.raises(ValueError, match="no PFS entry"):
+        unwrap_dell_dup(dup)
 
 
 # ---------------------------------------------------------------------------

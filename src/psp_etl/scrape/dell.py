@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -88,6 +89,21 @@ PFS_FOOTER_MAGIC = b"PFS.FTR."
 #   0x34 MetadataSigSize   (uint32 LE)
 PFS_ENTRY_HEADER_SIZE = 64
 _PFS_DATA_SIZE_OFFSET = 0x28
+
+# Current Dell DUPs (PE32+ self-extractors) embed the PFS volume as a
+# zlib-compressed section preceded by a fixed 10-byte signature. Layout
+# around each match (offsets relative to pattern start):
+#   -1     section type (0xAA = Firmware, 0xBB = Utilities)
+#    0..9  signature bytes EE AA 76 1B EC BB 20 F1 E6 51
+#   10     header checksum byte (ignored)
+#   11..   zlib stream (\x78\x9C deflate)
+# Reference: platomav/BIOSUtilities Dell PFS Update Extractor (MIT).
+_DELL_ZLIB_SECTION_RE = re.compile(
+    b"\xee\xaa\x76\x1b\xec\xbb\x20\xf1\xe6\x51.\x78\x9c",
+    re.DOTALL,
+)
+_DELL_FW_SECTION_TYPE = 0xAA
+_DELL_ZLIB_STREAM_OFFSET = 0x0B
 
 
 def classify_poweredge_socket(model: str) -> str | None:
@@ -173,32 +189,24 @@ def parse_catalog(xml_text: str, brand_prefix: str) -> list[_BiosComponent]:
     return entries
 
 
-def unwrap_dell_dup(data: bytes) -> bytes:
-    """Extract the AMD BIOS ROM payload from a Dell DUP package.
-
-    Walks the embedded PFS (Platform Firmware Storage) container and
-    returns the largest entry whose payload contains a recognised AMD
-    PSP/BIOS directory signature (``$PSP``, ``$PL2``, ``$BHD``, ``$BL2``).
-
-    Raises:
-        ValueError: if the DUP does not contain a parseable PFS body or
-            no PFS entry holds an AMD-shaped payload (e.g. for an Intel
-            Precision package mistakenly handed to this function).
-    """
+def _extract_pfs_body(data: bytes) -> bytes | None:
+    """Return the bytes between PFS.HDR. and PFS.FTR. markers, or ``None``."""
     hdr_idx = data.find(PFS_HEADER_MAGIC)
     if hdr_idx < 0:
-        raise ValueError("Dell DUP: PFS.HDR. magic not found")
+        return None
     ftr_idx = data.find(PFS_FOOTER_MAGIC, hdr_idx + len(PFS_HEADER_MAGIC))
     if ftr_idx < 0:
-        raise ValueError("Dell DUP: PFS.FTR. magic not found")
-
-    # The 16 bytes after PFS.HDR. are the header version (uint32) and the
-    # payload size (uint32). We don't trust the size field — the footer
-    # offset is the authoritative end of the body.
+        return None
+    # 16-byte PFS header: 8-byte magic + uint32 version + uint32 payload size.
+    # The footer offset is the authoritative end of the body; the size field
+    # is ignored.
     body_start = hdr_idx + len(PFS_HEADER_MAGIC) + 8
-    body = data[body_start:ftr_idx]
+    return data[body_start:ftr_idx]
 
-    best_payload: bytes | None = None
+
+def _largest_amd_pfs_payload(body: bytes) -> bytes | None:
+    """Walk PFS entries in *body* and return the largest AMD-signed payload."""
+    best: bytes | None = None
     pos = 0
     while pos + PFS_ENTRY_HEADER_SIZE <= len(body):
         header = body[pos : pos + PFS_ENTRY_HEADER_SIZE]
@@ -214,14 +222,74 @@ def unwrap_dell_dup(data: bytes) -> bytes:
         payload_start = pos + PFS_ENTRY_HEADER_SIZE
         payload = body[payload_start : payload_start + data_size]
 
-        if any(sig in payload for sig in PSP_SIGNATURES) and (best_payload is None or len(payload) > len(best_payload)):
-            best_payload = payload
+        if any(sig in payload for sig in PSP_SIGNATURES) and (best is None or len(payload) > len(best)):
+            best = payload
 
         pos += entry_total
+    return best
 
-    if best_payload is None:
-        raise ValueError("Dell DUP: no PFS entry contains AMD BIOS signatures")
-    return best_payload
+
+def _decompress_dell_firmware_sections(data: bytes) -> list[bytes]:
+    """Return decompressed payloads for each Firmware-typed Dell zlib section."""
+    sections: list[bytes] = []
+    for match in _DELL_ZLIB_SECTION_RE.finditer(data):
+        match_pos = match.start()
+        if match_pos == 0:
+            continue
+        if data[match_pos - 1] != _DELL_FW_SECTION_TYPE:
+            continue
+        stream_start = match_pos + _DELL_ZLIB_STREAM_OFFSET
+        try:
+            decompressor = zlib.decompressobj()
+            sections.append(decompressor.decompress(data[stream_start:]))
+        except zlib.error as exc:
+            logger.debug("Dell DUP: zlib decompression failed at offset %d: %s", stream_start, exc)
+    return sections
+
+
+def unwrap_dell_dup(data: bytes) -> bytes:
+    """Extract the AMD BIOS ROM payload from a Dell DUP package.
+
+    Two DUP variants are supported. Older DUPs embed the PFS (Platform
+    Firmware Storage) volume as raw bytes, locatable directly via the
+    ``PFS.HDR.``/``PFS.FTR.`` markers. Current PE32+ self-extractor DUPs
+    instead split the PFS volume into one or more zlib-compressed sections
+    (Firmware = 0xAA, Utilities = 0xBB) prefixed by a fixed signature; the
+    Firmware sections decompress to a normal PFS volume.
+
+    For each PFS volume found (raw or after zlib decompression), this
+    function walks PFS entries and keeps the largest payload that contains
+    a recognised AMD PSP/BIOS directory signature (``$PSP``, ``$PL2``,
+    ``$BHD``, ``$BL2``).
+
+    Raises:
+        ValueError: if no PFS volume is found, or no PFS entry across all
+            volumes holds an AMD-shaped payload (e.g. for an Intel
+            Precision package mistakenly handed to this function).
+    """
+    candidates: list[bytes] = []
+
+    raw_body = _extract_pfs_body(data)
+    if raw_body is not None:
+        payload = _largest_amd_pfs_payload(raw_body)
+        if payload is not None:
+            candidates.append(payload)
+
+    zlib_sections = _decompress_dell_firmware_sections(data)
+    for decompressed in zlib_sections:
+        section_body = _extract_pfs_body(decompressed)
+        if section_body is None:
+            continue
+        payload = _largest_amd_pfs_payload(section_body)
+        if payload is not None:
+            candidates.append(payload)
+
+    if candidates:
+        return max(candidates, key=len)
+
+    if PFS_HEADER_MAGIC not in data and not zlib_sections:
+        raise ValueError("Dell DUP: PFS.HDR. magic not found in any section")
+    raise ValueError("Dell DUP: no PFS entry contains AMD BIOS signatures")
 
 
 def _decode_catalog_bytes(raw: bytes) -> str:

@@ -643,7 +643,11 @@ async def _scrape_async(
                             )
                             continue
                         with tempfile.TemporaryDirectory() as tmp:
-                            rom_path = await scraper.download(update, Path(tmp))
+                            try:
+                                rom_path = await scraper.download(update, Path(tmp))
+                            except ValueError as exc:
+                                console.print(f"  [yellow]SKIP[/yellow] {board.model} v{update.bios_version}: {exc}")
+                                continue
                             if rom_path is None:
                                 console.print(
                                     f"  [yellow]SKIP[/yellow] {board.model} "
