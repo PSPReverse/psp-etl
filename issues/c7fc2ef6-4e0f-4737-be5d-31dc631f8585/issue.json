@@ -3,11 +3,12 @@
   "display_id": 88,
   "title": "Scraper: Dell PowerEdge AMD + Precision (DUP unwrap)",
   "description": "Goal: \n\nAcceptance criteria:\n- \n\nGoal: Scraper for Dell's two AMD product lines — PowerEdge servers (EPYC) and Precision workstations (Threadripper Pro). Hardest of the server-vendor scrapers because Dell wraps every BIOS in their proprietary DUP (Dell Update Package) format.\n\nboard_class: EPYC (PowerEdge R-series), ThreadripperPro (Precision 7960/7965 — actually Xeon, but check; some Precision lines do use TR-Pro).\n\nDell EPYC PowerEdge models:\n- Rome/Milan: R6515, R6525, R7515, R7525, C6525, R8515 (rare)\n- Genoa: R6615, R6625, R7615, R7625, R8615, R8625\n- Siena: R6715, R7715\n\nAccess strategy:\n- Catalog: https://www.dell.com/support/home/en-us/product-support/product/poweredge-{model}/drivers — lists firmware downloads per model.\n- Dell exposes a JSON-driven driver list: https://www.dell.com/support/driver/en-us/ips/api/driverlist/fetchdriversbyproduct?productcode={service-tag-or-system-id}\n- Service-tag/system-ID lookup table required — Dell uses System IDs internally (e.g. R6525 = 0945). Best harvested by hitting the public driver page and parsing the embedded JS.\n\nUnwrapping (the hard part):\n- Dell DUP is a self-extracting Linux/Windows binary with the BIOS payload at a known offset. Reference: pk4tech/BIOSUtilities-Bios-Extractor (https://github.com/pk4tech/BIOSUtilities-Bios-Extractor) parses Dell PFS update images including LZMA-compressed payloads, ZLIB, and Intel BIOS Guard / PFAT formats. **License unspecified** — reference only for the format documentation, do not import code.\n- Better fallback: platomav/BIOSUtilities (MIT) ships a 'Dell PFS Update Extractor' that we could vendor or call as a subprocess.\n\nImplementation notes:\n- Defer DUP unwrap to a post-download step shared with future Dell consumer/laptop scrapers.\n- Fully working Dell EPYC scraper is **3–5x more code** than ASRock/MSI — recommend filing this as a multi-PR effort.\n- LVFS *does* carry some Dell PowerEdge BIOS (search 'Dell PowerEdge' on https://fwupd.org/lvfs/devices/) — could be a much simpler partial-coverage path for the most popular SKUs. Worth checking before committing to the DUP route.\n\nAcceptance criteria:\n- Class at src/psp_etl/scrape/dell.py\n- DUP unwrap implementation (or call to platomav's tool)\n- Tests with one fixture DUP file (small one)\n- classify_board_class returns EPYC for SP3/SP5 (already wired)\n- CLI registration\n\nRelated: #79, #81.",
-  "status": "open",
+  "status": "closed",
   "priority": "low",
   "created_by": "driver",
   "created_at": "2026-05-07T07:03:08.314981960Z",
-  "updated_at": "2026-05-07T07:06:14.570144390Z",
+  "updated_at": "2026-05-07T10:50:31.415906050Z",
+  "closed_at": "2026-05-07T10:50:31.415906050Z",
   "labels": [
     "feature",
     "scraper"
