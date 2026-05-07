@@ -1,0 +1,396 @@
+"""Dell BIOS scraper for AMD PowerEdge servers and Precision workstations.
+
+Dell publishes a public, Akamai-fronted enterprise catalog and a separate
+client (Precision/Latitude/OptiPlex) catalog from which all per-system
+firmware can be enumerated without authentication:
+
+* PowerEdge:  ``https://downloads.dell.com/catalog/Catalog.xml.gz``
+  — gzip-wrapped UTF-16 XML, no WAF, no auth.
+* Precision:  ``https://downloads.dell.com/catalog/CatalogPC.cab``
+  — Microsoft Cabinet archive containing the same UTF-16 XML schema.
+
+Each catalog lists ``<SoftwareComponent>`` entries. We pick the ones whose
+``<ComponentType value="BIOS">`` and whose ``<SupportedSystems>`` contains a
+PowerEdge ``Brand prefix="PE"`` model in the AMD product set, or the
+Precision ``Brand prefix="PRE"`` Threadripper Pro model (only the 7875
+Tower is TR-Pro on the current line-up; 7960/7965 are Xeon despite being
+high-end Precisions, and are excluded).
+
+Dell ships every BIOS as a self-extracting Windows DUP (``BIOS_*.EXE``) or
+Linux DUP (``BIOS_*.BIN``). The catalog only references the ``WN64`` .EXE
+variants; the BIOS ROM payload is embedded inside Dell's PFS (Platform
+Firmware Storage) container. ``unwrap_dell_dup`` locates the PFS body in
+the DUP and returns the entry payload that contains AMD ROM signatures.
+
+The CAB Precision catalog requires a host-side ``cabextract`` binary;
+when the binary is unavailable the scraper logs a warning and proceeds
+with PowerEdge-only coverage.
+"""
+
+from __future__ import annotations
+
+import gzip
+import logging
+import re
+import shutil
+import subprocess
+import tempfile
+import xml.etree.ElementTree as ET
+from dataclasses import dataclass
+from pathlib import Path
+
+import httpx
+
+from psp_etl.scrape.base import BiosUpdate, BoardInfo, VendorScraper
+from psp_etl.scrape.extract import PSP_SIGNATURES
+
+logger = logging.getLogger(__name__)
+
+CATALOG_URL = "https://downloads.dell.com/catalog/Catalog.xml.gz"
+CATALOG_PC_URL = "https://downloads.dell.com/catalog/CatalogPC.cab"
+DOWNLOAD_BASE = "https://downloads.dell.com/"
+
+# AMD PowerEdge model prefixes -> socket. The model number's third digit
+# encodes the platform generation: ``5`` = Rome/Milan (SP3), ``6`` =
+# Genoa/Bergamo/Turin (SP5), ``7`` = Siena (SP6). The fourth digit (``15``
+# vs ``25``) is socket count and doesn't affect classification.
+_POWEREDGE_MODEL_SOCKET: tuple[tuple[re.Pattern[str], str], ...] = (
+    # Siena (SP6): R4715, R5715, R6715, R7715
+    (re.compile(r"^R[4-7]715$", re.IGNORECASE), "SP6"),
+    # Genoa / Bergamo / Turin (SP5): R6615/R6625/R7615/R7625/R8615/R8625,
+    # plus C6615/C6620/C6625 compute nodes and the XE96xx HPC chassis.
+    (re.compile(r"^R[6-8]6[12]5$", re.IGNORECASE), "SP5"),
+    (re.compile(r"^C66[12]5$", re.IGNORECASE), "SP5"),
+    (re.compile(r"^XE9[6-8]\d{2}$", re.IGNORECASE), "SP5"),
+    # Rome / Milan (SP3): R6515/R7515/R8515 and R6525/R7525/R8525,
+    # plus the C6525 compute node.
+    (re.compile(r"^R[6-8]5[12]5$", re.IGNORECASE), "SP3"),
+    (re.compile(r"^C6525$", re.IGNORECASE), "SP3"),
+)
+
+# Precision Threadripper Pro models. The 7875 Tower is sWRX9 (TR-Pro 7000WX);
+# the 7865 Tower is sWRX8 (TR-Pro 5000WX). 7960/7965 are Xeon-based and not
+# scoped here even though they share the Precision badge.
+_PRECISION_MODEL_SOCKET: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"^Precision-7875", re.IGNORECASE), "sWRX9"),
+    (re.compile(r"^Precision-7865", re.IGNORECASE), "sWRX8"),
+)
+
+# PFS markers (Dell Platform Firmware Storage) used to locate the BIOS body
+# inside a Windows or Linux DUP.
+PFS_HEADER_MAGIC = b"PFS.HDR."
+PFS_FOOTER_MAGIC = b"PFS.FTR."
+
+# PFS entry header is a fixed 64-byte structure. Field offsets used here:
+#   0x28 DataSize          (uint32 LE)
+#   0x2C DataSignatureSize (uint32 LE)
+#   0x30 MetadataSize      (uint32 LE)
+#   0x34 MetadataSigSize   (uint32 LE)
+PFS_ENTRY_HEADER_SIZE = 64
+_PFS_DATA_SIZE_OFFSET = 0x28
+
+
+def classify_poweredge_socket(model: str) -> str | None:
+    """Return the AMD socket for a PowerEdge *model* or ``None`` for non-AMD."""
+    for pattern, socket in _POWEREDGE_MODEL_SOCKET:
+        if pattern.match(model):
+            return socket
+    return None
+
+
+def classify_precision_socket(model: str) -> str | None:
+    """Return the AMD socket for a Precision *model* or ``None`` for non-AMD."""
+    for pattern, socket in _PRECISION_MODEL_SOCKET:
+        if pattern.match(model):
+            return socket
+    return None
+
+
+@dataclass(frozen=True)
+class _BiosComponent:
+    """Single ``<SoftwareComponent>`` BIOS entry parsed from a Dell catalog."""
+
+    package_id: str
+    version: str
+    release_date: str | None
+    path: str
+    models: tuple[str, ...]
+
+
+def parse_catalog(xml_text: str, brand_prefix: str) -> list[_BiosComponent]:
+    """Parse Dell catalog XML and return BIOS entries for *brand_prefix*.
+
+    *brand_prefix* selects the system family within ``<SupportedSystems>``:
+    ``"PE"`` for PowerEdge, ``"PRE"`` for Precision.
+
+    Only entries with ``<ComponentType value="BIOS">`` are returned, with
+    one component per matching ``<SupportedSystems>/<Brand>`` block. A
+    component that targets multiple models still produces a single entry
+    whose ``models`` tuple lists all of them.
+    """
+    # The published XML uses no namespaces at the root; ElementTree's default
+    # parser handles UTF-16 byte input, but here we always feed decoded text.
+    root = ET.fromstring(xml_text)
+    entries: list[_BiosComponent] = []
+    for sc in root.iter("SoftwareComponent"):
+        ctype = sc.find("ComponentType")
+        if ctype is None or ctype.get("value") != "BIOS":
+            continue
+        package_id = sc.get("packageID") or ""
+        version = sc.get("vendorVersion") or ""
+        release_date = sc.get("releaseDate")
+        path = sc.get("path") or ""
+        if not (package_id and path):
+            continue
+
+        models: list[str] = []
+        supported = sc.find("SupportedSystems")
+        if supported is None:
+            continue
+        for brand in supported.findall("Brand"):
+            if brand.get("prefix") != brand_prefix:
+                continue
+            for model in brand.findall("Model"):
+                display = model.find("Display")
+                if display is None:
+                    continue
+                text = (display.text or "").strip()
+                if text:
+                    models.append(text)
+
+        if not models:
+            continue
+
+        entries.append(
+            _BiosComponent(
+                package_id=package_id,
+                version=version,
+                release_date=release_date,
+                path=path,
+                models=tuple(models),
+            )
+        )
+    return entries
+
+
+def unwrap_dell_dup(data: bytes) -> bytes:
+    """Extract the AMD BIOS ROM payload from a Dell DUP package.
+
+    Walks the embedded PFS (Platform Firmware Storage) container and
+    returns the largest entry whose payload contains a recognised AMD
+    PSP/BIOS directory signature (``$PSP``, ``$PL2``, ``$BHD``, ``$BL2``).
+
+    Raises:
+        ValueError: if the DUP does not contain a parseable PFS body or
+            no PFS entry holds an AMD-shaped payload (e.g. for an Intel
+            Precision package mistakenly handed to this function).
+    """
+    hdr_idx = data.find(PFS_HEADER_MAGIC)
+    if hdr_idx < 0:
+        raise ValueError("Dell DUP: PFS.HDR. magic not found")
+    ftr_idx = data.find(PFS_FOOTER_MAGIC, hdr_idx + len(PFS_HEADER_MAGIC))
+    if ftr_idx < 0:
+        raise ValueError("Dell DUP: PFS.FTR. magic not found")
+
+    # The 16 bytes after PFS.HDR. are the header version (uint32) and the
+    # payload size (uint32). We don't trust the size field — the footer
+    # offset is the authoritative end of the body.
+    body_start = hdr_idx + len(PFS_HEADER_MAGIC) + 8
+    body = data[body_start:ftr_idx]
+
+    best_payload: bytes | None = None
+    pos = 0
+    while pos + PFS_ENTRY_HEADER_SIZE <= len(body):
+        header = body[pos : pos + PFS_ENTRY_HEADER_SIZE]
+        data_size = int.from_bytes(header[_PFS_DATA_SIZE_OFFSET : _PFS_DATA_SIZE_OFFSET + 4], "little")
+        data_sig_size = int.from_bytes(header[_PFS_DATA_SIZE_OFFSET + 4 : _PFS_DATA_SIZE_OFFSET + 8], "little")
+        meta_size = int.from_bytes(header[_PFS_DATA_SIZE_OFFSET + 8 : _PFS_DATA_SIZE_OFFSET + 12], "little")
+        meta_sig_size = int.from_bytes(header[_PFS_DATA_SIZE_OFFSET + 12 : _PFS_DATA_SIZE_OFFSET + 16], "little")
+
+        entry_total = PFS_ENTRY_HEADER_SIZE + data_size + data_sig_size + meta_size + meta_sig_size
+        if data_size == 0 or entry_total <= PFS_ENTRY_HEADER_SIZE or pos + entry_total > len(body):
+            break
+
+        payload_start = pos + PFS_ENTRY_HEADER_SIZE
+        payload = body[payload_start : payload_start + data_size]
+
+        if any(sig in payload for sig in PSP_SIGNATURES) and (best_payload is None or len(payload) > len(best_payload)):
+            best_payload = payload
+
+        pos += entry_total
+
+    if best_payload is None:
+        raise ValueError("Dell DUP: no PFS entry contains AMD BIOS signatures")
+    return best_payload
+
+
+def _decode_catalog_bytes(raw: bytes) -> str:
+    """Decode a Dell catalog payload to text, stripping the UTF-16 BOM."""
+    if raw.startswith(b"\xff\xfe"):
+        return raw.decode("utf-16-le")[1:]  # drop the BOM character
+    if raw.startswith(b"\xfe\xff"):
+        return raw.decode("utf-16-be")[1:]
+    return raw.decode("utf-8")
+
+
+def _extract_cab(cab_bytes: bytes) -> bytes:
+    """Extract the single XML member from a Dell CAB catalog.
+
+    Requires a system ``cabextract`` binary. Returns ``b""`` (with a
+    warning logged) when the binary is not on ``PATH`` so that callers
+    can degrade gracefully to PowerEdge-only coverage.
+    """
+    cab_tool = shutil.which("cabextract")
+    if cab_tool is None:
+        logger.warning("cabextract binary not found; skipping Dell PC catalog (Precision boards)")
+        return b""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        cab_file = tmp_path / "CatalogPC.cab"
+        cab_file.write_bytes(cab_bytes)
+        result = subprocess.run(
+            [cab_tool, "-d", str(tmp_path), "-q", str(cab_file)],
+            check=False,
+            capture_output=True,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                "cabextract failed (rc=%d): %s",
+                result.returncode,
+                result.stderr.decode("utf-8", errors="replace").strip(),
+            )
+            return b""
+        for path in tmp_path.iterdir():
+            if path.suffix.lower() == ".xml":
+                return path.read_bytes()
+    return b""
+
+
+class DellScraper(VendorScraper):
+    """Dell PowerEdge (EPYC) and Precision (TR-Pro) BIOS scraper."""
+
+    vendor: str = "Dell"
+
+    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+        self._client = client
+        self._own_client = client is None
+
+    async def __aenter__(self) -> DellScraper:
+        if self._own_client:
+            self._client = httpx.AsyncClient(
+                timeout=120.0,
+                follow_redirects=True,
+                headers={"User-Agent": "psp-etl"},
+            )
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        if self._own_client and self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
+    def _require_client(self) -> httpx.AsyncClient:
+        if self._client is None:
+            raise RuntimeError("Use 'async with DellScraper() as s:' to manage the client lifecycle")
+        return self._client
+
+    async def _fetch_poweredge_catalog(self) -> list[_BiosComponent]:
+        client = self._require_client()
+        resp = await client.get(CATALOG_URL)
+        resp.raise_for_status()
+        xml_text = _decode_catalog_bytes(gzip.decompress(resp.content))
+        return parse_catalog(xml_text, brand_prefix="PE")
+
+    async def _fetch_precision_catalog(self) -> list[_BiosComponent]:
+        client = self._require_client()
+        resp = await client.get(CATALOG_PC_URL)
+        resp.raise_for_status()
+        xml_bytes = _extract_cab(resp.content)
+        if not xml_bytes:
+            return []
+        xml_text = _decode_catalog_bytes(xml_bytes)
+        return parse_catalog(xml_text, brand_prefix="PRE")
+
+    async def list_boards(self) -> list[BoardInfo]:
+        """Enumerate AMD PowerEdge servers and TR-Pro Precision workstations."""
+        boards: dict[tuple[str, str], BoardInfo] = {}
+
+        for component in await self._fetch_poweredge_catalog():
+            for model in component.models:
+                socket = classify_poweredge_socket(model)
+                if socket is None:
+                    continue
+                key = (socket, model)
+                if key in boards:
+                    continue
+                boards[key] = BoardInfo(
+                    vendor=self.vendor,
+                    model=model,
+                    socket=socket,
+                    url=f"https://www.dell.com/support/home/en-us/product-support/product/poweredge-{model.lower()}/drivers",
+                )
+
+        for component in await self._fetch_precision_catalog():
+            for model in component.models:
+                socket = classify_precision_socket(model)
+                if socket is None:
+                    continue
+                slug = re.sub(r"[^A-Za-z0-9]+", "-", model).strip("-").lower()
+                key = (socket, model)
+                if key in boards:
+                    continue
+                boards[key] = BoardInfo(
+                    vendor=self.vendor,
+                    model=model,
+                    socket=socket,
+                    url=f"https://www.dell.com/support/home/en-us/product-support/product/{slug}/drivers",
+                )
+
+        return list(boards.values())
+
+    async def list_bios_updates(self, board: BoardInfo) -> list[BiosUpdate]:
+        """List every BIOS package the catalog has for *board*."""
+        if classify_poweredge_socket(board.model) is not None:
+            components = await self._fetch_poweredge_catalog()
+        elif classify_precision_socket(board.model) is not None:
+            components = await self._fetch_precision_catalog()
+        else:
+            return []
+
+        updates: list[BiosUpdate] = []
+        for component in components:
+            if board.model not in component.models:
+                continue
+            updates.append(
+                BiosUpdate(
+                    board=board,
+                    bios_version=component.version,
+                    download_url=DOWNLOAD_BASE + component.path.lstrip("/"),
+                    release_date=component.release_date,
+                    agesa_version=None,
+                )
+            )
+        return updates
+
+    async def download(self, update: BiosUpdate, dest_dir: Path) -> Path:
+        """Download a Dell DUP package and unwrap the PSP-bearing BIOS ROM."""
+        client = self._require_client()
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info(
+            "Downloading Dell %s %s from %s",
+            update.board.model,
+            update.bios_version,
+            update.download_url,
+        )
+        resp = await client.get(update.download_url)
+        resp.raise_for_status()
+
+        rom_bytes = unwrap_dell_dup(resp.content)
+
+        safe_model = re.sub(r"[^\w\-.]", "_", update.board.model)
+        safe_version = re.sub(r"[^\w\-.]", "_", update.bios_version)
+        out_path = dest_dir / f"{safe_model}_{safe_version}.rom"
+        out_path.write_bytes(rom_bytes)
+        return out_path

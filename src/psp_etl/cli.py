@@ -30,6 +30,7 @@ from psp_etl.scrape.asrock_rack import AsRockRackScraper
 from psp_etl.scrape.asus import AsusScraper
 from psp_etl.scrape.asus_server import AsusServerScraper
 from psp_etl.scrape.base import VendorScraper
+from psp_etl.scrape.dell import DellScraper
 from psp_etl.scrape.gigabyte import GigabyteScraper
 from psp_etl.scrape.gigabyte_server import GigabyteServerScraper
 from psp_etl.scrape.lenovo import LenovoScraper
@@ -44,6 +45,7 @@ _VENDOR_SCRAPERS: dict[str, type[VendorScraper]] = {
     "asrock-rack": AsRockRackScraper,
     "asus": AsusScraper,
     "asus-server": AsusServerScraper,
+    "dell": DellScraper,
     "gigabyte": GigabyteScraper,
     "gigabyte-server": GigabyteServerScraper,
     "lenovo": LenovoScraper,
@@ -555,6 +557,7 @@ def best(
             "gigabyte-server",
             "asus",
             "asus-server",
+            "dell",
             "msi",
             "supermicro",
             "tyan",
