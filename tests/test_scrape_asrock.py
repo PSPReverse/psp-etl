@@ -65,6 +65,20 @@ _CDX_AM4 = [
     ["original"],
     ["https://download.asrock.com/BIOS/AM4/A520M%20Pro4(1.00)ROM.zip"],
 ]
+_CDX_TR4 = [
+    ["original"],
+    ["https://download.asrock.com/BIOS/TR4/X399%20Taichi(3.92)ROM.zip"],
+    ["https://download.asrock.com/BIOS/TR4/X399%20Phantom%20Gaming%206(1.31)ROM.zip"],
+]
+_CDX_STRX4 = [
+    ["original"],
+    ["https://download.asrock.com/BIOS/sTRX4/TRX40%20Creator(1.73)ROM.zip"],
+    ["https://download.asrock.com/BIOS/sTRX4/TRX40%20Taichi(1.73)ROM.zip"],
+]
+_CDX_STR5 = [
+    ["original"],
+    ["https://download.asrock.com/BIOS/sTR5/TRX50%20WS(10.01)ROM.zip"],
+]
 
 
 def _response(
@@ -80,15 +94,30 @@ def _response(
 def _mock_client(
     am5_data: list | None = None,
     am4_data: list | None = None,
+    tr4_data: list | None = None,
+    strx4_data: list | None = None,
+    str5_data: list | None = None,
     download_content: bytes | None = None,
 ) -> AsyncMock:
     """Return a mock httpx.AsyncClient whose .get() returns preset responses."""
+    empty = [["original"]]
     am5 = am5_data if am5_data is not None else _CDX_AM5
     am4 = am4_data if am4_data is not None else _CDX_AM4
+    tr4 = tr4_data if tr4_data is not None else empty
+    strx4 = strx4_data if strx4_data is not None else empty
+    str5 = str5_data if str5_data is not None else empty
 
     async def _get(url: str, **kwargs):
         params = kwargs.get("params", {})
         url_param = str(params.get("url", ""))
+        # Order matters: 'sTRX4' contains 'TR' so check the more specific
+        # tokens first.
+        if "sTRX4" in url_param:
+            return _response(200, json=strx4, url=url)
+        if "sTR5" in url_param:
+            return _response(200, json=str5, url=url)
+        if "TR4" in url_param:
+            return _response(200, json=tr4, url=url)
         if "AM5" in url_param:
             return _response(200, json=am5, url=url)
         if "AM4" in url_param:
@@ -145,6 +174,34 @@ def test_parse_bios_url_returns_none_for_wrong_host():
 
 def test_parse_bios_url_returns_none_for_garbage():
     assert parse_bios_url("not-a-url") is None
+
+
+def test_parse_bios_url_tr4():
+    result = parse_bios_url("https://download.asrock.com/BIOS/TR4/X399%20Taichi(3.92)ROM.zip")
+    assert result == ("TR4", "X399 Taichi", "3.92")
+
+
+def test_parse_bios_url_strx4_preserves_lowercase_s():
+    result = parse_bios_url("https://download.asrock.com/BIOS/sTRX4/TRX40%20Creator(1.73)ROM.zip")
+    assert result == ("sTRX4", "TRX40 Creator", "1.73")
+
+
+def test_parse_bios_url_str5_preserves_lowercase_s():
+    result = parse_bios_url("https://download.asrock.com/BIOS/sTR5/TRX50%20WS(10.01)ROM.zip")
+    assert result == ("sTR5", "TRX50 WS", "10.01")
+
+
+def test_parse_bios_url_rejects_uppercase_strx4():
+    # The CDN uses 'sTRX4' (lower-s); the case-sensitive regex must reject
+    # a mistakenly upper-cased variant rather than silently coerce it.
+    assert parse_bios_url("https://download.asrock.com/BIOS/STRX4/TRX40%20Creator(1.73)ROM.zip") is None
+
+
+def test_parse_bios_url_rejects_unknown_socket():
+    # Folders such as 'Server' or '1700' (Intel) exist on the CDN but must
+    # not be picked up as AMD BIOS URLs.
+    assert parse_bios_url("https://download.asrock.com/BIOS/Server/EPC621D8A(L4.39)ROM.zip") is None
+    assert parse_bios_url("https://download.asrock.com/BIOS/1700/Z790%20Taichi(13.05)ROM.zip") is None
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +354,38 @@ def test_list_boards_empty_cdx():
     asyncio.run(_run())
 
 
+def test_list_boards_includes_threadripper_sockets():
+    async def _run():
+        scraper = AsRockScraper(
+            client=_mock_client(
+                tr4_data=_CDX_TR4,
+                strx4_data=_CDX_STRX4,
+                str5_data=_CDX_STR5,
+            )
+        )
+        boards = await scraper.list_boards()
+        by_model = {b.model: b.socket for b in boards}
+        assert by_model["X399 Taichi"] == "TR4"
+        assert by_model["X399 Phantom Gaming 6"] == "TR4"
+        assert by_model["TRX40 Creator"] == "sTRX4"
+        assert by_model["TRX40 Taichi"] == "sTRX4"
+        assert by_model["TRX50 WS"] == "sTR5"
+
+    asyncio.run(_run())
+
+
+def test_list_bios_updates_for_strx4_board():
+    async def _run():
+        scraper = AsRockScraper(client=_mock_client(strx4_data=_CDX_STRX4))
+        board = _fake_board("TRX40 Creator", "sTRX4")
+        updates = await scraper.list_bios_updates(board)
+        assert len(updates) == 1
+        assert updates[0].bios_version == "1.73"
+        assert updates[0].download_url.startswith("https://download.asrock.com/BIOS/sTRX4/")
+
+    asyncio.run(_run())
+
+
 # ---------------------------------------------------------------------------
 # AsRockScraper.list_bios_updates
 # ---------------------------------------------------------------------------
@@ -352,17 +441,22 @@ def test_list_bios_updates_uses_cdx_cache():
     http_calls: list[str] = []
 
     async def _run():
-        am5 = _CDX_AM5
-        am4 = _CDX_AM4
+        empty = [["original"]]
 
         async def counting_get(url: str, **kwargs):
             params = kwargs.get("params", {})
             url_param = str(params.get("url", ""))
             http_calls.append(url_param)
+            if "sTRX4" in url_param:
+                return _response(200, json=empty, url=url)
+            if "sTR5" in url_param:
+                return _response(200, json=empty, url=url)
+            if "TR4" in url_param:
+                return _response(200, json=empty, url=url)
             if "AM5" in url_param:
-                return _response(200, json=am5, url=url)
+                return _response(200, json=_CDX_AM5, url=url)
             if "AM4" in url_param:
-                return _response(200, json=am4, url=url)
+                return _response(200, json=_CDX_AM4, url=url)
             return _response(404, url=url)
 
         mock = AsyncMock()
@@ -370,7 +464,9 @@ def test_list_bios_updates_uses_cdx_cache():
         scraper = AsRockScraper(client=mock)
 
         await scraper.list_boards()
-        http_calls_after_list_boards = len(http_calls)  # should be 2 (AM4 + AM5)
+        # One CDX hit per socket in _SOCKETS.
+        http_calls_after_list_boards = len(http_calls)
+        assert http_calls_after_list_boards == 5
 
         board = _fake_board("B650 LiveMixer", "AM5")
         await scraper.list_bios_updates(board)

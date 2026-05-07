@@ -27,12 +27,18 @@ from psp_etl.scrape.extract import safe_namelist
 logger = logging.getLogger(__name__)
 
 _CDX_API = "https://web.archive.org/cdx/search/cdx"
-_SOCKETS = ("AM4", "AM5")
+
+# CDN folder names ASRock uses for each AMD socket. The strings are also the
+# canonical socket values stored on ``BoardInfo.socket``; case matters because
+# the Threadripper folders use a lowercase 's' prefix on the CDN
+# (``sTRX4``/``sTR5``) while AM4/AM5/TR4 are upper-case. Threadripper Pro
+# (``sWRX8``/``sWRX9``) lives only in the ASRock Rack catalogue and is handled
+# by the rack scraper (see issue #84).
+_SOCKETS = ("AM4", "AM5", "TR4", "sTRX4", "sTR5")
 
 # Matches: https://download.asrock.com/BIOS/{socket}/{model}({version})...
 _BIOS_URL_RE = re.compile(
-    r"https://download\.asrock\.com/BIOS/(AM[45])/([^(]+)\(([^)]+)\)",
-    re.IGNORECASE,
+    r"https://download\.asrock\.com/BIOS/(" + "|".join(_SOCKETS) + r")/([^(]+)\(([^)]+)\)",
 )
 
 
@@ -110,7 +116,7 @@ class AsRockScraper(VendorScraper):
         return entries
 
     async def list_boards(self) -> list[BoardInfo]:
-        """Enumerate all ASRock AM4/AM5 motherboards via Wayback Machine CDX."""
+        """Enumerate ASRock motherboards across every socket in :data:`_SOCKETS`."""
         seen: dict[tuple[str, str], BoardInfo] = {}
         for socket in _SOCKETS:
             entries = await self._fetch_cdx_for_socket(socket)
@@ -176,7 +182,7 @@ def parse_bios_url(url: str) -> tuple[str, str, str] | None:
     m = _BIOS_URL_RE.match(url)
     if not m:
         return None
-    socket = m.group(1).upper()
+    socket = m.group(1)
     model = unquote(m.group(2)).strip()
     version = m.group(3)
     return socket, model, version
