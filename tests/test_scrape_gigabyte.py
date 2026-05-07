@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 
 from psp_etl.scrape.base import BiosUpdate, BoardInfo
 from psp_etl.scrape.gigabyte import (
+    _SOCKET_URLS,
     GigabyteScraper,
     _extract_date_from_element,
     _extract_rom_from_zip,
@@ -493,10 +494,136 @@ def test_gigabyte_scraper_is_vendor_scraper():
 
 def test_gigabyte_scraper_default_sockets():
     scraper = GigabyteScraper()
-    assert "AM4" in scraper.sockets
-    assert "AM5" in scraper.sockets
+    # Default covers Ryzen, Threadripper, and Threadripper Pro consumer-tree boards.
+    assert set(scraper.sockets) == {"AM4", "AM5", "sTRX4", "sTR5", "sWRX8", "sWRX9"}
 
 
 def test_gigabyte_scraper_custom_sockets():
     scraper = GigabyteScraper(sockets=["AM5"])
     assert scraper.sockets == ["AM5"]
+
+
+# ---------------------------------------------------------------------------
+# Threadripper / Threadripper Pro socket coverage
+# ---------------------------------------------------------------------------
+
+
+def test_socket_urls_cover_threadripper_and_pro():
+    """_SOCKET_URLS must include the four TR/TR-Pro sockets in scope for #92."""
+    assert _SOCKET_URLS["sTRX4"].endswith("AMD--Chipset-AMD-TRX40")
+    assert _SOCKET_URLS["sTR5"].endswith("AMD--Chipset-AMD-TRX50")
+    assert _SOCKET_URLS["sWRX8"].endswith("AMD--Chipset-AMD-WRX80")
+    assert _SOCKET_URLS["sWRX9"].endswith("AMD--Chipset-AMD-WRX90")
+
+
+def test_socket_urls_use_consumer_host():
+    """All TR/TR-Pro listings live on www.gigabyte.com (consumer tree, not enterprise)."""
+    for socket, url in _SOCKET_URLS.items():
+        assert url.startswith("https://www.gigabyte.com/Motherboard/"), (socket, url)
+
+
+# Synthetic listing modelled on the Gigabyte TRX40 chipset page. The DOM
+# structure (anchor with /Motherboard/{SLUG}/support href) is identical to
+# the AM4/AM5 product listing, so _parse_board_list works unchanged.
+TRX40_LISTING_HTML = """
+<html>
+<body>
+  <div class="product-list">
+    <div class="product-item">
+      <a href="/Motherboard/TRX40-AORUS-XTREME-rev-10/support">
+        <span class="product-name">TRX40 AORUS XTREME</span>
+      </a>
+    </div>
+    <div class="product-item">
+      <a href="/Motherboard/TRX40-AORUS-PRO-WIFI-rev-10/support">
+        <span class="product-name">TRX40 AORUS PRO WIFI</span>
+      </a>
+    </div>
+    <div class="product-item">
+      <a href="/Motherboard/TRX40-DESIGNARE-rev-10/support">
+        <span class="product-name">TRX40 DESIGNARE</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+
+WRX80_LISTING_HTML = """
+<html>
+<body>
+  <div class="product-list">
+    <div class="product-item">
+      <a href="/Motherboard/WRX80-SU8-IPMI-rev-10/support">
+        <span class="product-name">WRX80-SU8-IPMI</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+
+def test_parse_board_list_trx40():
+    scraper = GigabyteScraper()
+    soup = BeautifulSoup(TRX40_LISTING_HTML, "html.parser")
+    boards = scraper._parse_board_list(soup, "sTRX4")
+    models = {b.model for b in boards}
+    assert models == {"TRX40 AORUS XTREME", "TRX40 AORUS PRO WIFI", "TRX40 DESIGNARE"}
+    assert all(b.socket == "sTRX4" for b in boards)
+    assert all(b.vendor == "Gigabyte" for b in boards)
+    assert all(b.url.startswith("https://www.gigabyte.com/Motherboard/") for b in boards)
+    assert all(b.url.endswith("/support") for b in boards)
+
+
+def test_parse_board_list_wrx80():
+    scraper = GigabyteScraper()
+    soup = BeautifulSoup(WRX80_LISTING_HTML, "html.parser")
+    boards = scraper._parse_board_list(soup, "sWRX8")
+    assert len(boards) == 1
+    board = boards[0]
+    assert board.model == "WRX80 SU8 IPMI"
+    assert board.socket == "sWRX8"
+    assert board.url == "https://www.gigabyte.com/Motherboard/WRX80-SU8-IPMI-rev-10/support"
+
+
+# Synthetic Threadripper BIOS download page. ZIP filename uses the same
+# mb_bios_{model}_{version}.zip convention as Ryzen, so version extraction
+# logic is exercised end-to-end.
+TRX40_SUPPORT_HTML = """
+<html>
+<body>
+  <div id="support-dl-bios">
+    <table>
+      <tr>
+        <td>F6</td>
+        <td>2024-11-12</td>
+        <td>32MB</td>
+        <td>
+          <a href="https://download.gigabyte.com/FileList/BIOS/mb_bios_trx40-aorus-xtreme_f6.zip">
+            Download
+          </a>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
+"""
+
+
+def test_parse_bios_downloads_trx40():
+    scraper = GigabyteScraper()
+    soup = BeautifulSoup(TRX40_SUPPORT_HTML, "html.parser")
+    board = BoardInfo(
+        vendor="Gigabyte",
+        model="TRX40 AORUS XTREME",
+        socket="sTRX4",
+        url="https://www.gigabyte.com/Motherboard/TRX40-AORUS-XTREME-rev-10/support",
+    )
+    updates = scraper._parse_bios_downloads(soup, board)
+    assert len(updates) == 1
+    assert updates[0].bios_version == "F6"
+    assert updates[0].release_date == "2024-11-12"
+    assert updates[0].board.socket == "sTRX4"

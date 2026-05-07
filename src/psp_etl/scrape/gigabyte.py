@@ -1,7 +1,10 @@
 """Gigabyte BIOS scraper.
 
-Enumerates AM4/AM5 motherboards from Gigabyte product pages, finds BIOS download
-links, downloads ZIPs, and extracts raw ROM images.
+Enumerates AMD-socket motherboards from Gigabyte product pages, finds BIOS
+download links, downloads ZIPs, and extracts raw ROM images. Covers Ryzen
+(AM4, AM5), Threadripper (sTRX4, sTR5), and Threadripper Pro (sWRX8, sWRX9)
+boards on the consumer site (www.gigabyte.com). EPYC server boards live on
+the enterprise tree and are out of scope here.
 
 Note: www.gigabyte.com is protected by Akamai Bot Manager, which blocks requests
 from datacenter IP ranges. This scraper is designed to work from residential or
@@ -29,11 +32,18 @@ from psp_etl.scrape.extract import safe_namelist
 
 logger = logging.getLogger(__name__)
 
-# Gigabyte board listing page for each socket type.
-# These pages list all motherboards with AM4/AM5 sockets.
+# Gigabyte board listing page for each socket type. Two URL patterns coexist
+# on the site: AM4/AM5 use a friendly slug under /All-Series/, while every
+# other chipset is reached through the chipset-filtered listing page
+# (/AMD--Chipset-AMD-{CHIPSET}). Both render the same product-card markup
+# that ``_parse_board_list`` consumes, so parsing logic is identical.
 _SOCKET_URLS: dict[str, str] = {
     "AM4": "https://www.gigabyte.com/Motherboard/All-Series/AM4",
     "AM5": "https://www.gigabyte.com/Motherboard/All-Series/AM5",
+    "sTRX4": "https://www.gigabyte.com/Motherboard/AMD--Chipset-AMD-TRX40",
+    "sTR5": "https://www.gigabyte.com/Motherboard/AMD--Chipset-AMD-TRX50",
+    "sWRX8": "https://www.gigabyte.com/Motherboard/AMD--Chipset-AMD-WRX80",
+    "sWRX9": "https://www.gigabyte.com/Motherboard/AMD--Chipset-AMD-WRX90",
 }
 
 _BASE_URL = "https://www.gigabyte.com"
@@ -67,7 +77,11 @@ _CDN_HEADERS = {
 
 
 class GigabyteScraper(VendorScraper):
-    """Scrapes Gigabyte's website for AM4/AM5 BIOS updates."""
+    """Scrapes Gigabyte's website for AMD-socket BIOS updates.
+
+    Covers Ryzen (AM4, AM5), Threadripper (sTRX4, sTR5), and Threadripper Pro
+    (sWRX8, sWRX9) consumer-tree boards.
+    """
 
     def __init__(
         self,
@@ -78,14 +92,15 @@ class GigabyteScraper(VendorScraper):
     ) -> None:
         """
         Args:
-            sockets: List of socket types to scrape ("AM4", "AM5", or both).
-                     Defaults to both AM4 and AM5.
+            sockets: List of socket types to scrape. Recognised values are the
+                     keys of ``_SOCKET_URLS`` (AM4, AM5, sTRX4, sTR5, sWRX8,
+                     sWRX9). Defaults to all six.
             rate_limit: Seconds to wait between requests (default 2.0).
             max_retries: Number of retries on transient errors (default 3).
             client: Optional pre-existing AsyncClient. If None, one is created
                     in __aenter__ and closed in __aexit__.
         """
-        self.sockets = sockets if sockets is not None else ["AM4", "AM5"]
+        self.sockets = sockets if sockets is not None else list(_SOCKET_URLS)
         self.rate_limit = rate_limit
         self.max_retries = max_retries
         self._last_request: float = 0.0
@@ -149,7 +164,7 @@ class GigabyteScraper(VendorScraper):
     # ------------------------------------------------------------------
 
     async def list_boards(self) -> list[BoardInfo]:
-        """Enumerate all AM4/AM5 Gigabyte motherboard models."""
+        """Enumerate all Gigabyte motherboard models for ``self.sockets``."""
         client = self._require_client()
         boards: list[BoardInfo] = []
         for socket in self.sockets:

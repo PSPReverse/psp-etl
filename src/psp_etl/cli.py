@@ -536,7 +536,7 @@ def best(
 @click.argument("vendor", type=click.Choice(["asrock", "gigabyte", "asus", "msi", "all"]))
 @click.option(
     "--socket",
-    type=click.Choice(["am4", "am5", "strx4", "str5", "swrx8", "all"]),
+    type=click.Choice(["am4", "am5", "strx4", "str5", "swrx8", "swrx9", "all"]),
     default="all",
     help="Filter by CPU socket.",
 )
