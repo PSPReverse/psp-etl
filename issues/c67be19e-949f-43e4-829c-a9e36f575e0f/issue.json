@@ -1,0 +1,11 @@
+{
+  "uuid": "c67be19e-949f-43e4-829c-a9e36f575e0f",
+  "display_id": 96,
+  "title": "Scraper bug: Tyan scraper crashes on 404 instead of skip-with-warn",
+  "description": "Steps to reproduce:\n1. \n\nExpected: \nActual: \n\nThe Tyan scraper (CL-86) crashes mid-run when a single BIOS download URL returns\n404, losing all subsequent boards. With the current bug, 10 ROMs are pulled before\nthe crash; an unknown number after the crashing URL never get tried.\n\n## Reproduction\n\n    $ uv run psp-etl scrape tyan\n    httpx.HTTPStatusError: Client error '404 Not Found' for url\n    'https://download1.mitaccomputing.com/pub/bios/S8056GME_BIOS_V2.03.zip'\n\n## Root cause\n\nThe scraper constructs ZIP URLs deterministically from board slug + version\n(catalog-driven without per-detail-page round-trip — see commit message of CL-86).\nFor some boards, MiTAC's actual filename convention deviates from the constructed\npattern. The 404 propagates as an httpx exception out of `download()` rather than\nbeing caught and skipped.\n\n## Fix\n\nIn src/psp_etl/scrape/tyan.py `download()`, catch `httpx.HTTPStatusError` for 404,\nlog a warning naming the board+version+url, and return None / skip. Match the\npattern used in the Gigabyte server scraper (CL-83) for transient download\nfailures.\n\nOptionally: if the constructed URL fails, fall back to scraping the per-board\ndownload page for the actual filename. Higher engineering cost; not required for\nthe immediate skip-don't-crash fix.\n\n## Acceptance criteria\n\n- `uv run psp-etl scrape tyan` runs to completion (no uncaught exception)\n- a 404 logs a clear `WARNING` line naming model + version + URL\n- successfully-scraped boards persist in the DB even when later boards 404\n\nRefs: CL-86.",
+  "status": "open",
+  "priority": "high",
+  "created_by": "driver",
+  "created_at": "2026-05-07T12:03:18.228202908Z",
+  "updated_at": "2026-05-07T12:03:18.228202908Z"
+}
