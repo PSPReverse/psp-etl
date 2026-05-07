@@ -23,18 +23,41 @@ SERIES_FILTER_URL = "https://odinapi.asus.com/recent-data/apiv2/SeriesFilterResu
 # Support webapi for BIOS file listing
 BIOS_API_URL = "https://www.asus.com/support/webapi/ProductV2/GetPDBIOS"
 
-# Socket SubSpec IDs for odinapi
+# Socket SubSpec IDs for odinapi.
+#
+# Discovered via the SeriesFilter endpoint
+# (https://odinapi.asus.com/recent-data/apiv2/SeriesFilter?...&ProductLevel2Code=motherboards),
+# which returns a SpecCategory list. Item ID=104 ("Socket") groups socket
+# names under their CPU vendor; ID=105 ("Chipset") groups chipset names.
+#
+# AM4/AM5/sTRX4/sTR5 use the Socket SubSpec. The ASUS API does not expose
+# sWRX8/sWRX9 as a Socket SubSpec, so WRX80E boards are filtered by their
+# Chipset SubSpec (199656 = "AMD WRX80"). WRX90E boards are returned by
+# sTR5 (235720) because AMD's WRX90 chipset physically uses the sTR5 socket.
 SOCKET_SUBSPECS: dict[str, int] = {
     "AM4": 532,
     "AM5": 172178,
+    "sTRX4": 17854,  # Threadripper 3000 (Castle Peak)
+    "sTR5": 235720,  # Threadripper 7000 + Threadripper PRO 7000WX (WRX90E)
+    "sWRX8": 199656,  # WRX80 chipset filter; Threadripper PRO 3000WX/5000WX
 }
 
-# AM5 and AM4 chipset identifiers for socket detection from model name
+# Chipset identifiers for socket detection from board model name.
 AM5_CHIPSETS = re.compile(r"\b(X670E?|B650E?|A620|X870E?|B850|B840)\b", re.IGNORECASE)
 AM4_CHIPSETS = re.compile(
-    r"\b(X570|B550|B450|A520|X470|B350|X370|B250|A320|B150|X299|TRX40|TRX50)\b",
+    r"\b(X570|B550|B450|A520|X470|B350|X370|B250|A320|B150|X299)\b",
     re.IGNORECASE,
 )
+# Threadripper / Threadripper PRO chipsets. Token → socket name mapping below.
+TR_CHIPSETS = re.compile(r"\b(TRX40|TRX50|WRX80E?|WRX90E?)\b", re.IGNORECASE)
+_TR_CHIPSET_TO_SOCKET: dict[str, str] = {
+    "TRX40": "sTRX4",
+    "TRX50": "sTR5",
+    "WRX80": "sWRX8",
+    "WRX80E": "sWRX8",
+    "WRX90": "sTR5",
+    "WRX90E": "sTR5",
+}
 
 # Required headers for support API endpoints
 SUPPORT_API_HEADERS = {
@@ -55,11 +78,14 @@ def _strip_html(text: str) -> str:
 
 
 def _detect_socket(model_name: str) -> str | None:
-    """Detect AM4 or AM5 socket from board model name."""
+    """Detect AMD socket from a board model name (AM4/AM5/sTRX4/sTR5/sWRX8)."""
     if AM5_CHIPSETS.search(model_name):
         return "AM5"
     if AM4_CHIPSETS.search(model_name):
         return "AM4"
+    tr_match = TR_CHIPSETS.search(model_name)
+    if tr_match:
+        return _TR_CHIPSET_TO_SOCKET[tr_match.group(1).upper()]
     return None
 
 
@@ -158,9 +184,9 @@ class AsusScraper(VendorScraper):
         return boards
 
     async def list_boards(self) -> list[BoardInfo]:
-        """Enumerate all AM4 and AM5 ASUS motherboard models."""
+        """Enumerate ASUS AMD motherboards across AM4/AM5/sTRX4/sTR5/sWRX8."""
         boards: list[BoardInfo] = []
-        for socket in ("AM4", "AM5"):
+        for socket in SOCKET_SUBSPECS:
             socket_boards = await self._fetch_boards_for_socket(socket)
             boards.extend(socket_boards)
         return boards

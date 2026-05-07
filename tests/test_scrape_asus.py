@@ -9,6 +9,7 @@ import pytest
 
 from psp_etl.scrape.asus import (
     ASUS_CAP_HEADER_SIZE,
+    SOCKET_SUBSPECS,
     AsusScraper,
     _detect_socket,
     _extract_agesa,
@@ -65,6 +66,20 @@ def test_detect_socket_am4():
 def test_detect_socket_unknown():
     assert _detect_socket("ROG MAXIMUS XIII APEX") is None  # Z590 = Intel
     assert _detect_socket("WS C422 PRO/SE") is None
+
+
+def test_detect_socket_threadripper():
+    assert _detect_socket("ROG Zenith II Extreme") is None  # No chipset token in name
+    assert _detect_socket("ROG Strix TRX40-E Gaming") == "sTRX4"
+    assert _detect_socket("Prime TRX40-Pro") == "sTRX4"
+    assert _detect_socket("Pro WS TRX50-SAGE WIFI") == "sTR5"
+
+
+def test_detect_socket_threadripper_pro():
+    assert _detect_socket("Pro WS WRX80E-SAGE SE WIFI") == "sWRX8"
+    assert _detect_socket("Pro WS WRX80-SAGE") == "sWRX8"
+    # WRX90 boards physically use the sTR5 socket per AMD spec
+    assert _detect_socket("Pro WS WRX90E-SAGE SE") == "sTR5"
 
 
 def test_extract_agesa_combopi():
@@ -133,6 +148,74 @@ def test_download_strips_cap_header(tmp_path: Path):
         async with AsusScraper(client=client) as scraper:
             out = await scraper.download(update, tmp_path)
         return out
+
+    out = asyncio.run(run())
+    assert out.exists()
+    assert out.read_bytes() == rom_magic
+
+
+def test_download_strips_cap_header_trx40(tmp_path: Path):
+    """A Threadripper (TRX40) BIOS .CAP must be unwrapped the same way as AM4/AM5."""
+    rom_magic = b"TRX40_ROM_PAYLOAD" * 200
+    cap_data = b"\x00" * ASUS_CAP_HEADER_SIZE + rom_magic
+    zip_bytes = _make_bios_zip(cap_data, cap_name="ROG-Strix-TRX40-E-Gaming-ASUS-2402.CAP")
+
+    transport = httpx.MockTransport(lambda _req: httpx.Response(200, content=zip_bytes))
+    client = httpx.AsyncClient(transport=transport)
+
+    board = BoardInfo(
+        vendor="ASUS",
+        model="ROG Strix TRX40-E Gaming",
+        socket="sTRX4",
+        url="https://example.com",
+    )
+    update = BiosUpdate(
+        board=board,
+        bios_version="2402",
+        download_url="https://dlcdnets.asus.com/pub/ASUS/mb/SocketsTRX4/ROG-Strix-TRX40-E-Gaming/ROG-Strix-TRX40-E-Gaming-ASUS-2402.zip",
+        release_date=None,
+        agesa_version=None,
+    )
+
+    import asyncio
+
+    async def run():
+        async with AsusScraper(client=client) as scraper:
+            return await scraper.download(update, tmp_path)
+
+    out = asyncio.run(run())
+    assert out.exists()
+    assert out.read_bytes() == rom_magic
+
+
+def test_download_strips_cap_header_wrx80e(tmp_path: Path):
+    """A Threadripper PRO (WRX80E) BIOS .CAP must be unwrapped the same way."""
+    rom_magic = b"WRX80E_ROM_PAYLOAD" * 200
+    cap_data = b"\x00" * ASUS_CAP_HEADER_SIZE + rom_magic
+    zip_bytes = _make_bios_zip(cap_data, cap_name="PWSWRX80.CAP")
+
+    transport = httpx.MockTransport(lambda _req: httpx.Response(200, content=zip_bytes))
+    client = httpx.AsyncClient(transport=transport)
+
+    board = BoardInfo(
+        vendor="ASUS",
+        model="Pro WS WRX80E-SAGE SE WIFI",
+        socket="sWRX8",
+        url="https://example.com",
+    )
+    update = BiosUpdate(
+        board=board,
+        bios_version="1801",
+        download_url="https://dlcdnets.asus.com/pub/ASUS/mb/SocketsWRX8/Pro-WS-WRX80E-SAGE-SE-WIFI/Pro-WS-WRX80E-SAGE-SE-WIFI-ASUS-1801.zip",
+        release_date=None,
+        agesa_version=None,
+    )
+
+    import asyncio
+
+    async def run():
+        async with AsusScraper(client=client) as scraper:
+            return await scraper.download(update, tmp_path)
 
     out = asyncio.run(run())
     assert out.exists()
@@ -329,3 +412,22 @@ def test_asus_scraper_is_vendor_scraper():
     from psp_etl.scrape.base import VendorScraper
 
     assert issubclass(AsusScraper, VendorScraper)
+
+
+# ---------------------------------------------------------------------------
+# SOCKET_SUBSPECS coverage
+# ---------------------------------------------------------------------------
+
+
+def test_socket_subspecs_includes_threadripper_sockets():
+    """All AMD AM4/AM5/Threadripper/Threadripper-Pro sockets must be enumerated.
+
+    SubSpec IDs are sourced from odinapi.asus.com SeriesFilter SpecCategory
+    (Socket=ID 104 for AM4/AM5/sTRX4/sTR5; Chipset=ID 105 for sWRX8 since
+    ASUS does not expose a separate Socket SubSpec for it).
+    """
+    assert SOCKET_SUBSPECS["AM4"] == 532
+    assert SOCKET_SUBSPECS["AM5"] == 172178
+    assert SOCKET_SUBSPECS["sTRX4"] == 17854
+    assert SOCKET_SUBSPECS["sTR5"] == 235720
+    assert SOCKET_SUBSPECS["sWRX8"] == 199656

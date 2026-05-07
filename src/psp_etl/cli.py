@@ -534,7 +534,12 @@ def best(
 
 @cli.command()
 @click.argument("vendor", type=click.Choice(["asrock", "gigabyte", "asus", "msi", "all"]))
-@click.option("--socket", type=click.Choice(["am4", "am5", "all"]), default="all", help="Filter by CPU socket.")
+@click.option(
+    "--socket",
+    type=click.Choice(["am4", "am5", "strx4", "str5", "swrx8", "all"]),
+    default="all",
+    help="Filter by CPU socket.",
+)
 @click.option("--limit", type=int, default=None, help="Max boards to process per vendor.")
 @click.option("--dry-run", is_flag=True, help="List download URLs without downloading.")
 @click.pass_context
