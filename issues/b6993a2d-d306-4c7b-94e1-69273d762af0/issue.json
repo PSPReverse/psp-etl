@@ -1,0 +1,11 @@
+{
+  "uuid": "b6993a2d-d306-4c7b-94e1-69273d762af0",
+  "display_id": 95,
+  "title": "Scraper bug: Supermicro hits 403 Forbidden on catalog (Akamai)",
+  "description": "Steps to reproduce:\n1. \n\nExpected: \nActual: \n\nThe Supermicro scraper landed in CL-82 fails with HTTP 403 from Akamai when fetching\nhttps://www.supermicro.com/support/resources/bios_ipmi.php?vendor=2 — the public AMD\ncatalog URL the scraper is built around.\n\n## Reproduction\n\n    $ uv run psp-etl scrape supermicro\n    httpx.HTTPStatusError: Client error '403 Forbidden' for url\n    'https://www.supermicro.com/support/resources/bios_ipmi.php?vendor=2'\n\n## Root cause\n\nThe scraper sends a plain User-Agent. Supermicro is fronted by Akamai, which now\nrejects datacenter / non-browser User-Agents on this endpoint. During the original\nissue triage (CL-79 survey) the catalog returned 200 with a plain UA from a\nresidential IP — Akamai's filter has tightened since.\n\n## Fix\n\nAdopt the same browser-like header set the existing Gigabyte consumer scraper\nuses (src/psp_etl/scrape/gigabyte.py:42-66 _HEADERS dict): full Chrome User-Agent\nplus Sec-Fetch-* + sec-ch-ua + Accept-Language. Worked for Gigabyte's Akamai\nfront; should work for Supermicro's.\n\nIf Akamai escalates further, fall back to Wayback CDX over\nwww.supermicro.com/support/resources/downloadcenter/firmware/* (per-board pages\nhave the actual download URLs).\n\n## Acceptance criteria\n\n- `uv run psp-etl scrape supermicro --dry-run` lists at least 25 H11/H12/H13 boards\n  without error\n- existing tests still pass\n\nRefs: CL-82 (original scraper), CL-79 (prior-art survey).",
+  "status": "open",
+  "priority": "high",
+  "created_by": "driver",
+  "created_at": "2026-05-07T12:03:12.615894849Z",
+  "updated_at": "2026-05-07T12:03:12.615894849Z"
+}
