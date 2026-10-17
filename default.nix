@@ -6,35 +6,15 @@ let
   python = pkgs.python312;
   pythonPackages = python.pkgs;
 
-  psptool = pythonPackages.buildPythonPackage rec {
-    pname = "psptool";
-    version = "3.4";
-    pyproject = true;
+  psptoolRs = import (pkgs.fetchFromGitHub {
+    owner = "vringar";
+    repo = "psptool-rs";
+    rev = "3df62fe878937007c76064db4934e3875ea1bb78";
+    hash = "sha256-yPnjx7lLcq4f73VezBUutXzzVWHgSFFsZcxLNo4Je10=";
+  });
 
-    src = pythonPackages.fetchPypi {
-      inherit pname version;
-      hash = "sha256-/XEELA1A8nOsYbVIuRTEehyzcHSy1acn3yDh8Ckr9YM=";
-    };
-
-    build-system = with pythonPackages; [
-      hatchling
-      hatch-vcs
-    ];
-
-    dependencies = with pythonPackages; [
-      cryptography
-      prettytable
-    ];
-
-    # psptool has no test suite in the sdist
-    doCheck = false;
-
-    meta = with pkgs.lib; {
-      description = "AMD PSP firmware parsing and extraction tool";
-      homepage = "https://github.com/PSPReverse/PSPTool";
-      license = licenses.gpl3Only;
-    };
-  };
+  # Drop-in Rust replacement exposing `import psptool`.
+  psptool = psptoolRs.pythonFor pythonPackages;
 
   psp-etl = pythonPackages.buildPythonPackage {
     pname = "psp-etl";
