@@ -725,3 +725,62 @@ def test_get_best_folders_partitions_by_board_class(db):
     assert len(rows) == 2  # one Ryzen, one EPYC — not collapsed
     boards = {r["board_class"] for r in rows}
     assert boards == {"Ryzen", "EPYC"}
+
+
+# ---------------------------------------------------------------------------
+# Provenance backfill and coverage
+# ---------------------------------------------------------------------------
+
+
+def test_backfill_replaces_manual_vendor_and_fills_gaps(db):
+    db.insert_image(Image(sha256="aa", vendor="manual", bios_version="1.0"))
+
+    changed = db.backfill_image_provenance(
+        "aa",
+        Image(
+            sha256="aa",
+            vendor="ASUS",
+            model="X",
+            socket="AM5",
+            board_class="Ryzen",
+            bios_version="9.9",
+            download_url="https://example.invalid/x.zip",
+            chipset="X670E",
+        ),
+    )
+
+    row = db.get_image_by_sha256("aa")
+    assert changed
+    assert row["vendor"] == "ASUS"
+    assert row["model"] == "X"
+    assert row["socket"] == "AM5"
+    assert row["download_url"] == "https://example.invalid/x.zip"
+    assert row["chipset"] == "X670E"
+    assert row["board_class"] == "Ryzen"
+    assert row["bios_version"] == "1.0"  # recorded value is never overwritten
+
+
+def test_backfill_keeps_real_vendor_and_reports_no_change(db):
+    db.insert_image(Image(sha256="bb", vendor="MSI", model="M", socket="AM4", bios_version="1", download_url="u"))
+
+    changed = db.backfill_image_provenance("bb", Image(sha256="bb", vendor="ASUS", model="Z", socket="AM5"))
+
+    assert not changed
+    assert db.get_image_by_sha256("bb")["vendor"] == "MSI"
+
+
+def test_backfill_unknown_sha_is_noop(db):
+    assert not db.backfill_image_provenance("missing", Image(sha256="missing", vendor="ASUS"))
+
+
+def test_coverage_counts_provenance_per_generation(db):
+    scraped = db.insert_image(Image(sha256="s1", vendor="ASUS", download_url="u"))
+    manual = db.insert_image(Image(sha256="m1", vendor="manual"))
+    for instance, (image_id, blob) in enumerate(((scraped, "b1"), (manual, "b1"), (manual, "b2"))):
+        db.insert_entry(Entry(image_id=image_id, type_id=1, zen_generation="zen4", blob_sha256=blob, instance=instance))
+
+    rows = {row["generation"]: row for row in db.coverage_by_generation()}
+
+    assert rows["zen4"]["images"] == 2
+    assert rows["zen4"]["with_provenance"] == 1
+    assert rows["zen4"]["blobs"] == 2

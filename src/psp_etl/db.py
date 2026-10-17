@@ -24,6 +24,7 @@ class Image:
     file_size: int | None = None
     download_date: str | None = None
     rom_count: int = 1
+    chipset: str | None = None
     id: int | None = None
 
 
@@ -100,7 +101,8 @@ CREATE TABLE IF NOT EXISTS images (
     download_url TEXT,
     file_size INTEGER,
     download_date TEXT,
-    rom_count INTEGER DEFAULT 1
+    rom_count INTEGER DEFAULT 1,
+    chipset TEXT
 );
 
 CREATE TABLE IF NOT EXISTS entries (
@@ -236,8 +238,8 @@ class Database:
             INSERT INTO images
                 (sha256, vendor, model, socket, board_class,
                  bios_version, agesa_version,
-                 download_url, file_size, download_date, rom_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 download_url, file_size, download_date, rom_count, chipset)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(sha256) DO NOTHING
             """,
             (
@@ -252,6 +254,7 @@ class Database:
                 image.file_size,
                 image.download_date,
                 image.rom_count,
+                image.chipset,
             ),
         )
         self._conn.commit()
@@ -435,6 +438,57 @@ class Database:
 
     def get_image_by_sha256(self, sha256: str) -> sqlite3.Row | None:
         return self._conn.execute("SELECT * FROM images WHERE sha256 = ?", (sha256,)).fetchone()
+
+    def backfill_image_provenance(self, sha256: str, provenance: Image) -> bool:
+        """Fill provenance gaps on an existing image; never overwrite recorded values.
+
+        A ``manual`` vendor is a placeholder and is replaced by a real vendor.
+        Returns True if any column changed.
+        """
+        row = self.get_image_by_sha256(sha256)
+        if row is None:
+            return False
+        updates: dict[str, str | int] = {}
+        if row["vendor"] == "manual" and provenance.vendor != "manual":
+            updates["vendor"] = provenance.vendor
+        for column in (
+            "model",
+            "socket",
+            "board_class",
+            "bios_version",
+            "agesa_version",
+            "download_url",
+            "download_date",
+            "chipset",
+        ):
+            value = getattr(provenance, column)
+            if row[column] is None and value is not None:
+                updates[column] = value
+        if not updates:
+            return False
+        assignments = ", ".join(f"{column} = ?" for column in updates)
+        self._conn.execute(f"UPDATE images SET {assignments} WHERE sha256 = ?", (*updates.values(), sha256))
+        self._conn.commit()
+        return True
+
+    def coverage_by_generation(self) -> list[sqlite3.Row]:
+        """Per generation: images, images with full provenance, distinct blobs."""
+        return self._conn.execute(
+            """
+            SELECT COALESCE(e.zen_generation, 'unlabelled') AS generation,
+                   COUNT(DISTINCT e.image_id) AS images,
+                   COUNT(DISTINCT CASE WHEN i.vendor != 'manual' AND i.download_url IS NOT NULL
+                                       THEN e.image_id END) AS with_provenance,
+                   COUNT(DISTINCT e.blob_sha256) AS blobs
+            FROM entries e JOIN images i ON i.id = e.image_id
+            GROUP BY generation ORDER BY generation
+            """
+        ).fetchall()
+
+    def coverage_by_vendor(self) -> list[sqlite3.Row]:
+        return self._conn.execute(
+            "SELECT vendor, COUNT(*) AS images FROM images GROUP BY vendor ORDER BY images DESC"
+        ).fetchall()
 
     def get_image_by_id(self, image_id: int) -> sqlite3.Row | None:
         return self._conn.execute("SELECT * FROM images WHERE id = ?", (image_id,)).fetchone()
@@ -758,6 +812,27 @@ class Database:
             params,
         ).fetchone()
         return (row["with_strings"] or 0, row["without_strings"] or 0)
+
+    def labels_for_blob(self, sha256: str) -> sqlite3.Row | None:
+        """Return representative corpus labels for a blob_sha256, or None.
+
+        Used to join externally-stored symbol maps (keyed by ``sha256_plain``,
+        which equals ``entries.blob_sha256``) back to the corpus.  A blob may be
+        shared by many entries across vendors/boards; they agree on
+        type/generation/version (content-addressed body), so a single
+        deterministic representative row is returned.
+        """
+        return self._conn.execute(
+            """
+            SELECT e.type_id, e.type_name, e.zen_generation, e.version, i.vendor
+            FROM entries e
+            JOIN images i ON i.id = e.image_id
+            WHERE e.blob_sha256 = ?
+            ORDER BY e.id
+            LIMIT 1
+            """,
+            (sha256,),
+        ).fetchone()
 
     def get_strings_for_blob(self, blob_sha256: str) -> list[sqlite3.Row]:
         return self._conn.execute(

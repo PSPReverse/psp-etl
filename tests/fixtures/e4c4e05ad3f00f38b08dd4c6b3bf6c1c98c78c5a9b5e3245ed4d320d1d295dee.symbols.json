@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "sha256_plain": "e4c4e05ad3f00f38b08dd4c6b3bf6c1c98c78c5a9b5e3245ed4d320d1d295dee",
+  "binary": "offchip_zen3/synthetic-fixture",
+  "template": "non-split-or-x73",
+  "addr_width": 4,
+  "regions": [
+    {"name": "HDR", "start": 0, "size": 256, "read": true, "write": true, "execute": false, "volatile": false, "initialized": true, "file_offset": 0},
+    {"name": ".text", "start": 256, "size": 67008, "read": true, "write": false, "execute": true, "volatile": false, "initialized": true, "file_offset": 256}
+  ],
+  "functions": [
+    {"start": 256, "ranges": [[256, 260]], "name": "_start", "auto_named": false, "signature": "undefined _start(void)"},
+    {"start": 260, "ranges": [[260, 512]], "name": "FUN_00000104", "auto_named": true, "signature": "undefined FUN_00000104(void)"},
+    {"start": 512, "ranges": [[512, 900]], "name": "FUN_00000200", "auto_named": true, "signature": "undefined FUN_00000200(void)"}
+  ]
+}

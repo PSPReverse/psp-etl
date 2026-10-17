@@ -23,7 +23,9 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn
 from rich.table import Table
 
 from psp_etl import strings as strings_mod
+from psp_etl import symbol_maps
 from psp_etl.db import Database, Image, PrimaryImage, StringAnalysis
+from psp_etl.inbox import PROVENANCE_FILE, ingest_inbox
 from psp_etl.ingest import BOARD_CLASSES, classify_board_class, ingest_rom
 from psp_etl.scrape.asrock import AsRockScraper
 from psp_etl.scrape.asrock_rack import AsRockRackScraper
@@ -830,6 +832,64 @@ def select(ctx: click.Context) -> None:
 # ---------------------------------------------------------------------------
 
 
+@cli.command("ingest-inbox")
+@click.argument("inbox", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--provenance-only",
+    is_flag=True,
+    help="Do not read ROM files; only backfill provenance for images already in the corpus.",
+)
+@click.pass_context
+def ingest_inbox_cmd(ctx: click.Context, inbox: Path, provenance_only: bool) -> None:
+    """Ingest ROMs plus provenance.tsv exported by `pspdb export-roms`."""
+    data_dir: Path = ctx.obj["data_dir"]
+    db_path = data_dir / "psp-etl.db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if not (inbox / PROVENANCE_FILE).is_file():
+        raise click.ClickException(f"{PROVENANCE_FILE} not found in {inbox}")
+
+    with Database(db_path) as db:
+        try:
+            summary = ingest_inbox(inbox, db, data_dir, provenance_only=provenance_only)
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
+
+    Console().print(
+        f"new={summary.new} backfilled={summary.backfilled} unchanged={summary.unchanged} "
+        f"mismatched={summary.mismatched} missing={summary.missing}"
+    )
+
+
+@cli.command()
+@click.pass_context
+def coverage(ctx: click.Context) -> None:
+    """Show corpus coverage: images and blobs per generation, and provenance completeness."""
+    data_dir: Path = ctx.obj["data_dir"]
+    db_path = data_dir / "psp-etl.db"
+
+    if not db_path.exists():
+        raise click.ClickException(f"Database not found: {db_path}")
+
+    console = Console()
+    with Database(db_path) as db:
+        gen_table = Table(title="Coverage per Generation", box=box.SIMPLE_HEAD)
+        gen_table.add_column("Generation", style="cyan")
+        gen_table.add_column("Images", justify="right")
+        gen_table.add_column("With provenance", justify="right")
+        gen_table.add_column("Blobs", justify="right")
+        for row in db.coverage_by_generation():
+            gen_table.add_row(row["generation"], str(row["images"]), str(row["with_provenance"]), str(row["blobs"]))
+        console.print(gen_table)
+
+        vendor_table = Table(title="Images per Vendor", box=box.SIMPLE_HEAD)
+        vendor_table.add_column("Vendor", style="cyan")
+        vendor_table.add_column("Images", justify="right")
+        for row in db.coverage_by_vendor():
+            vendor_table.add_row(row["vendor"], str(row["images"]))
+        console.print(vendor_table)
+
+
 @cli.command()
 @click.option(
     "--gen",
@@ -928,6 +988,104 @@ def stats(ctx: click.Context, gen: str | None) -> None:
         summary_table.add_row("Entries with score > 0", str(with_strings))
         summary_table.add_row("Entries with score = 0 or unanalyzed", str(without_strings))
         console.print(summary_table)
+
+
+# ---------------------------------------------------------------------------
+# import-map
+# ---------------------------------------------------------------------------
+
+
+@cli.command("import-map")
+@click.argument("paths", nargs=-1, type=click.Path(exists=True, path_type=Path), required=True)
+@click.pass_context
+def import_map(ctx: click.Context, paths: tuple[Path, ...]) -> None:
+    """Ingest one or more local schema-1 Ghidra symbol-map JSON files."""
+    data_dir: Path = ctx.obj["data_dir"]
+    console = Console()
+
+    stored = 0
+    rejected: list[tuple[Path, str]] = []
+    for path in paths:
+        try:
+            sha256_plain = symbol_maps.store_map(data_dir, path)
+        except ValueError as exc:
+            rejected.append((path, str(exc)))
+            console.print(f"[red]REJECT[/red] {path.name}: {exc}")
+            continue
+        stored += 1
+        console.print(f"[green]STORE[/green]  {path.name} → {sha256_plain[:12]}…")
+
+    console.print(f"\n[bold]Stored {stored} map(s), rejected {len(rejected)}.[/bold]")
+    if rejected:
+        raise click.ClickException(f"{len(rejected)} map(s) rejected.")
+
+
+# ---------------------------------------------------------------------------
+# maps
+# ---------------------------------------------------------------------------
+
+
+@cli.command()
+@click.option("--format", "fmt", type=click.Choice(["table", "json"]), default="table", help="Output format.")
+@click.pass_context
+def maps(ctx: click.Context, fmt: str) -> None:
+    """List stored symbol maps joined to corpus labels by sha256_plain."""
+    data_dir: Path = ctx.obj["data_dir"]
+    db_path = data_dir / "psp-etl.db"
+
+    if not db_path.exists():
+        raise click.ClickException(f"Database not found: {db_path}")
+
+    records: list[dict] = []
+    with Database(db_path) as db:
+        for sha256_plain, map_dict in symbol_maps.iter_maps(data_dir):
+            labels = db.labels_for_blob(sha256_plain)
+            records.append(
+                {
+                    "sha256_plain": sha256_plain,
+                    "function_count": len(map_dict.get("functions", [])),
+                    "type_name": labels["type_name"] if labels else None,
+                    "zen_generation": labels["zen_generation"] if labels else None,
+                    "version": labels["version"] if labels else None,
+                    "vendor": labels["vendor"] if labels else None,
+                    "has_corpus_blob": labels is not None,
+                }
+            )
+
+    if not records:
+        click.echo("No symbol maps stored.")
+        return
+
+    if fmt == "json":
+        click.echo(json.dumps(records, indent=2))
+        return
+
+    console = Console()
+    table = Table(title="Stored Symbol Maps")
+    table.add_column("sha256_plain", style="dim")
+    table.add_column("Type", style="cyan")
+    table.add_column("Gen", style="green")
+    table.add_column("Version")
+    table.add_column("Vendor", style="magenta")
+    table.add_column("Functions", justify="right", style="yellow")
+    for rec in records:
+        if rec["has_corpus_blob"]:
+            type_name = rec["type_name"] or ""
+            gen = rec["zen_generation"] or ""
+            version = rec["version"] or ""
+            vendor = rec["vendor"] or ""
+        else:
+            type_name = "[yellow](no corpus blob)[/yellow]"
+            gen = version = vendor = ""
+        table.add_row(
+            f"{rec['sha256_plain'][:12]}…",
+            type_name,
+            gen,
+            version,
+            vendor,
+            str(rec["function_count"]),
+        )
+    console.print(table)
 
 
 if __name__ == "__main__":

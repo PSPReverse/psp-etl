@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "sha256_plain": "6f94447d17591665750c58aabbac2580c9d640d5c7bd240e3f6911472c9b45f7",
+  "binary": "offchip_zen2/synthetic-fixture",
+  "template": "non-split-or-x73",
+  "addr_width": 4,
+  "regions": [
+    {"name": "HDR", "start": 0, "size": 256, "read": true, "write": true, "execute": false, "volatile": false, "initialized": true, "file_offset": 0},
+    {"name": ".text", "start": 256, "size": 68288, "read": true, "write": false, "execute": true, "volatile": false, "initialized": true, "file_offset": 256}
+  ],
+  "functions": [
+    {"start": 256, "ranges": [[256, 260]], "name": "_start", "auto_named": false, "signature": "undefined _start(void)"},
+    {"start": 260, "ranges": [[260, 320]], "name": "FUN_00000104", "auto_named": true, "signature": "undefined FUN_00000104(void)"},
+    {"start": 508, "ranges": [[508, 560], [560, 600]], "name": "FUN_000001fc", "auto_named": true, "signature": "undefined FUN_000001fc(void)"},
+    {"start": 37000, "ranges": [[37000, 37100]], "name": "FUN_00009088", "auto_named": true, "signature": "undefined FUN_00009088(void)"}
+  ],
+  "name_source": "synthetic-test-fixture",
+  "name_transfer": {"method": "none", "matched": 0}
+}
