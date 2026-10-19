@@ -37,9 +37,6 @@ def test_schema_creates_indexes(db):
         "idx_entries_blob",
         "idx_entries_version",
         "idx_analysis_score",
-        "idx_strings_blob",
-        "idx_strings_text",
-        "idx_strings_category",
     }
     assert expected <= indexes
 

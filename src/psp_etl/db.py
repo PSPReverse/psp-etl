@@ -189,9 +189,6 @@ CREATE INDEX IF NOT EXISTS idx_entries_md5 ON entries(firmware_md5);
 CREATE INDEX IF NOT EXISTS idx_entries_blob ON entries(blob_sha256);
 CREATE INDEX IF NOT EXISTS idx_entries_version ON entries(version);
 CREATE INDEX IF NOT EXISTS idx_analysis_score ON string_analysis(score DESC);
-CREATE INDEX IF NOT EXISTS idx_strings_blob ON strings(blob_sha256);
-CREATE INDEX IF NOT EXISTS idx_strings_text ON strings(string);
-CREATE INDEX IF NOT EXISTS idx_strings_category ON strings(category);
 """
 
 
