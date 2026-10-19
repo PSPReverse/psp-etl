@@ -107,12 +107,7 @@
     "fbac55aa-545d-4ab0-8186-f83dabd160d3": 97,
     "fcb74810-dbaf-4f5c-a9d7-ebef94fa3107": 66
   },
-  "locks": {
-    "104": {
-      "agent_id": "driver",
-      "claimed_at": "2026-10-19T20:46:30.746243186Z"
-    }
-  },
+  "locks": {},
   "issues": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": {
       "uuid": "0060d4bc-5f85-46b8-910d-5682e001bfeb",
@@ -2205,8 +2200,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-19T20:46:48.496038634Z",
+    "timestamp": "2026-10-19T20:47:01.883718919Z",
     "agent_id": "driver",
-    "agent_seq": 47
+    "agent_seq": 48
   }
 }
