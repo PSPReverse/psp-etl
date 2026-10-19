@@ -1,6 +1,6 @@
 {
   "next_display_id": 105,
-  "next_comment_id": 49,
+  "next_comment_id": 50,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
     "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a": 64,
@@ -197,7 +197,7 @@
       "priority": "medium",
       "created_by": "driver",
       "created_at": "2026-05-07T19:16:51.049567779Z",
-      "updated_at": "2026-10-19T20:47:58.677691681Z",
+      "updated_at": "2026-10-19T20:55:03.369325158Z",
       "labels": [
         "feature",
         "scraper"
@@ -215,6 +215,15 @@
           "kind": "note",
           "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZ8f8QISWA50fCzu+RRLDJ/HXFSu/G0663SqbKvCP5W2GP8s66fPS6aLfb2ivTQH38rcfqFSBJqR4tIdIxwM3Dg=="
+        },
+        "fb64dbd7-4cd9-4d37-9acb-471571112199": {
+          "display_id": 49,
+          "author": "driver",
+          "content": "PARKED per board #800 (two goals: Zen2 mailbox fuzzing, Zen3 EPYC boot). Finding: only 8/1346 images have agesa_version; ROM bodies often embed e.g. 'GenoaPI-SP5 1.0.0.9' — extractor idea, not started.",
+          "created_at": "2026-10-19T20:55:03.361885017Z",
+          "kind": "note",
+          "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABArZluKwHHbGnLXc4MU7IvEAoT8NjXA0YCDYehXbrOX5Yvhf5XYm5UTwWlIrh78Thn9XtscYSj6s7A5msqQyVOBw=="
         }
       }
     },
@@ -2259,8 +2268,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-19T20:49:07.754355692Z",
+    "timestamp": "2026-10-19T20:55:03.369325158Z",
     "agent_id": "driver",
-    "agent_seq": 55
+    "agent_seq": 56
   }
 }
