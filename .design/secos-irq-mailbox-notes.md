@@ -33,3 +33,17 @@ SPI window struct at `0x151d8`; the BHD directory read fails with status `0x145`
 
 ## Paused (do not continue without Stefan)
 Callers/bounds analysis of the driver-blob flash-address lookup; Zen3 `0x107` boot-failure analysis.
+
+## Zen2 SecOS app command dispatch (static, app VA 0x200000, Thumb)
+Replies are `0x80000000 | status` written back into the command word (cmd bits kept).
+- **BIOS->PSP mailbox, word at base+0x570 (0x03010570, C2PMSG_28)**: handler at 0x200b4c, cmd = bits 23:16.
+  Handled ids: 2,3,5,6,7, 0x14, 0x1a (status 9), 0x1b, 0x1c (status 4), 0x1d, 0x1e, 0x1f/0x20 (no-op return),
+  0x21, 0x27, 0x28, 0x29, 0x2a, 0x2d, 0x30, 0x39, 0x40, 0x47, 0x50, 0x51, 0x5d. id 4 -> status 8.
+  Any other id (incl. 0x2b,0x2c,0x2e,0x2f) -> status 4. ids 3,6,7,0x1b,0x1f,0x28,0x29,0x2a,0x30,0x40,0x50,0x51
+  first map the command buffer (CmdRspBuf lo/hi at +0x574/+0x578). Tables: tbb at 0x200c26 (2..7), 0x200c38
+  (0x1a..0x20), 0x200c54 (0x27..0x30). Agrees with AMD 55758 Table 21 and with dynamic runs (0x1a -> 9, 0x1c -> 4).
+- Ring mailbox (`FUN_00202f98`, word at base+0x544, cmd bits 19:16): `1` = ring init
+  (12-byte buffer {lo, hi, size}; non-4K alignment -> status 6; already initialised -> 0xd), `2` = destroy,
+  else status 8. Matches Linux PSP_CMD_TEE_RING_INIT/DESTROY.
+- A third word at base+0x71c (`FUN_00202c4c`, ids 1,3-9,0xd,0xe,0x10,0x14,0x15,0x19,0x23,0x24, default status 8)
+  is a different interface; which register it shadows is unverified.
