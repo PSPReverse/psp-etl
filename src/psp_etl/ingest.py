@@ -118,6 +118,26 @@ def classify_by_agesa(agesa_version: str | None) -> str | None:
     return None
 
 
+# Off-chip bootloader (type 0x1) version prefix -> generation. Only prefixes
+# that map to exactly one generation among PSPTool-labelled corpus entries;
+# '0.8' (zen1 and zen2) and the unlabelled '0.14'/'0.2A'/'0.3D' are left out.
+_BL_VERSION_GEN = {
+    "0.5": "zen1",
+    "0.C": "zen2",
+    "0.D": "zen2",
+    "0.11": "zen3",
+    "0.13": "zen3",
+    "0.29": "zen4",
+}
+
+
+def classify_by_bl_version(version: str | None) -> str | None:
+    """Guess Zen generation from an off-chip bootloader version like ``0.13.0.7A``."""
+    if not version:
+        return None
+    return _BL_VERSION_GEN.get(".".join(version.split(".")[:2]).upper())
+
+
 # ---------------------------------------------------------------------------
 # Board-class classification
 # ---------------------------------------------------------------------------
@@ -208,6 +228,14 @@ def ingest_rom(
     # --- Walk ROM → directory → file tree ------------------------------------
     for rom_idx, rom in enumerate(psp.blob.roms):
         for dir_idx, directory in enumerate(rom.directories):
+            bl_gen = next(
+                (
+                    classify_by_bl_version(f.get_readable_version())
+                    for f in directory.files
+                    if getattr(f, "type", None) == 1
+                ),
+                None,
+            )
             for f in directory.files:
                 _ingest_file(
                     f=f,
@@ -217,6 +245,7 @@ def ingest_rom(
                     rom=rom,
                     image_id=image_id,
                     image_agesa=image_agesa,
+                    dir_bl_gen=bl_gen,
                     db=db,
                     blobs_dir=blobs_dir,
                 )
@@ -233,7 +262,7 @@ def ingest_rom(
 # ---------------------------------------------------------------------------
 
 
-def _ingest_file(*, f, rom_idx, dir_idx, directory, rom, image_id, image_agesa, db, blobs_dir):
+def _ingest_file(*, f, rom_idx, dir_idx, directory, rom, image_id, image_agesa, dir_bl_gen, db, blobs_dir):
     """Extract one PSP firmware file and persist it."""
     # PSPTool raises a wide and undocumented set of exceptions when a file is
     # malformed (struct unpack errors, key derivation errors, decompression
@@ -296,8 +325,11 @@ def _ingest_file(*, f, rom_idx, dir_idx, directory, rom, image_id, image_agesa, 
         # No PSP-ID annotation; fall back to ROM-embedded AGESA, then to the
         # scraper-supplied image.agesa_version. The latter unlocks server
         # BIOSes (EPYC etc.) where PSPTool returns no generation and the ROM
-        # carries no consumer AGESA tag.
-        inferred = classify_by_agesa(getattr(rom, "agesa_version", None)) or classify_by_agesa(image_agesa)
+        # carries no consumer AGESA tag. Last resort: the directory's own
+        # off-chip bootloader version.
+        inferred = (
+            classify_by_agesa(getattr(rom, "agesa_version", None)) or classify_by_agesa(image_agesa) or dir_bl_gen
+        )
         zen_gens = [inferred]
 
     # --- Directory magic (bytes → str) ---------------------------------------

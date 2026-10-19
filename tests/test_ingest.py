@@ -12,6 +12,7 @@ from psp_etl.ingest import (
     _normalize_zen_generation,
     _normalize_zen_generations,
     classify_by_agesa,
+    classify_by_bl_version,
     ingest_rom,
 )
 
@@ -70,6 +71,23 @@ def test_normalize_zen_generation(raw, expected):
 )
 def test_classify_by_agesa(agesa, expected):
     assert classify_by_agesa(agesa) == expected
+
+
+@pytest.mark.parametrize(
+    ("version", "expected"),
+    [
+        ("0.13.0.7A", "zen3"),
+        ("0.C.0.8C", "zen2"),
+        ("0.29.1.A4", "zen4"),
+        ("0.11.0.5C", "zen3"),
+        ("0.8.0.7D", None),
+        ("0.3D.0.7A", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_classify_by_bl_version(version, expected):
+    assert classify_by_bl_version(version) == expected
 
 
 # ---------------------------------------------------------------------------
