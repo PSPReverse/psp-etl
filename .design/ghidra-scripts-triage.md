@@ -21,7 +21,15 @@ orphaned links `RelinkArchiveTypes` repairs): fix those comments when deleting.
 - `setup/ApplyZen2MemoryMap` vs `setup/ApplyPspMemoryMap`: both add PSP memory regions;
   the generic one takes `<gen> <platform>`. Pipeline step 1 is documented as the Zen2 one
   but the invocation at `run_full_analysis.sh:61` uses the generic one. Likely the Zen2
-  script is now redundant: confirm output equality on a Zen2 program, then delete it.
+  script is now redundant. Checked statically (block lists compared, not run): the Zen2 SRAM
+  blocks are identical to the generic zen2 ryzen/epyc ones; the only difference is the
+  extra `SMN_MapCtrl` block (0x3220000, 0x40) in the Zen2 script. To merge: add
+  `SMN_MapCtrl` to `ApplyPspMemoryMap`, delete `ApplyZen2MemoryMap`, fix the stale step 1
+  comment in `run_full_analysis.sh`.
+- Both scripts place `IRQ_Controller` at 0x030103b0 (the Zen1 base). The off-chip BL on
+  Zen2/3/4/5 uses 0x030102b0 for ACK/PEN/ID (`secos-irq-mailbox-notes.md`), which both
+  scripts leave inside `UnknownMMIO_1`: the block label is wrong for Zen2+ and should be
+  generation-dependent.
 - `analysis/AnalyzeMailboxIRQ`, `FindMailboxDispatch`, `FindMailboxPatterns`: three
   exploratory mailbox tracers, none in the pipeline, all superseded in practice by
   `LabelMailboxHandlers` plus the static findings in `secos-irq-mailbox-notes.md`.
