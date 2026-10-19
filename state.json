@@ -959,11 +959,12 @@
       "uuid": "78b20956-2b6f-4fd4-93ca-c06a2822b23b",
       "display_id": 104,
       "title": "probe",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "driver",
       "created_at": "2026-10-19T20:46:18.670067688Z",
-      "updated_at": "2026-10-19T20:46:18.670067688Z"
+      "updated_at": "2026-10-19T20:46:48.496038634Z",
+      "closed_at": "2026-10-19T20:46:48.496036741Z"
     },
     "791c8b89-41df-48cf-a8b2-350aca006744": {
       "uuid": "791c8b89-41df-48cf-a8b2-350aca006744",
@@ -2204,8 +2205,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-19T20:46:30.746243186Z",
+    "timestamp": "2026-10-19T20:46:48.496038634Z",
     "agent_id": "driver",
-    "agent_seq": 46
+    "agent_seq": 47
   }
 }
