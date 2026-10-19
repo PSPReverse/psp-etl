@@ -192,14 +192,10 @@ $ANALYZE "$(pwd)/data/ghidra" psp-etl -noanalysis \
 | DeleteFolder.java | Recursively delete a project folder |
 | ReorganizeSect.java | Move `Category__Name` files into `Category/Name` subfolders |
 | FixExternalLinks.java | Fix broken external program references after reorganization |
-| SeverArchiveLinks.java | Remove source archive references (makes types local) — **destructive, breaks sync** |
-| ResolveProjectArchives.java | Convert FILE-type archive refs to PROJECT-type — **known broken**: sets pointer but not UUID |
-| ReassociateProjectArchives.java | Re-link disassociated types to project archives — **known broken**: same UUID issue |
-| UpdateArchivePaths.java | Fix broken FILE-type archive refs via .gdt re-resolution — **known broken**: same UUID issue |
 
-> **Archive link repair**: After `SeverArchiveLinks` was used, types became local with
-> new UniversalIDs that don't match the archive. `ResolveProjectArchives`,
-> `ReassociateProjectArchives`, and `UpdateArchivePaths` all tried to fix this via
+> **Archive link repair**: Severing archive links (an earlier script, since removed) made
+> types local with new UniversalIDs that don't match the archive. Three earlier repair
+> scripts (also removed) tried to fix this via
 > `associateDataTypeWithArchive()`, but that only sets the source archive pointer —
 > it doesn't restore the UUID match that Ghidra needs for "sync with archive".
 > Use `RelinkArchiveTypes.java` instead, which re-resolves types from the .gdt
@@ -220,6 +216,6 @@ $ANALYZE "$(pwd)/data/ghidra" psp-etl -noanalysis \
 - **Symlink resolution**: `-import` resolves symlinks, so program names come from the resolved path. Use hardlinks or rename after import.
 - **GZF ambiguity**: Both programs and data type archives use `.gzf` extension. `FileDataTypeManager.openFileArchive()` requires `.gdt` extension.
 - **DomainFolder.getFile()**: Unreliable after file operations in headless mode. Collect names first, then re-fetch.
-- **Source archive errors**: Imported types reference source archive UUIDs. If the archive isn't found on open, Ghidra shows error dialogs. **Do not use `SeverArchiveLinks.java`** — it destroys UUID-based sync permanently. Instead, install .gdt files in `~/.config/ghidra/ghidra_<version>_NIX/data/` so Ghidra auto-discovers them. If links are already severed, use `RelinkArchiveTypes.java` to repair.
+- **Source archive errors**: Imported types reference source archive UUIDs. If the archive isn't found on open, Ghidra shows error dialogs. **Never sever archive links** — it destroys UUID-based sync permanently. Instead, install .gdt files in `~/.config/ghidra/ghidra_<version>_NIX/data/` so Ghidra auto-discovers them. If links are already severed, use `RelinkArchiveTypes.java` to repair.
 - **Archive link lifecycle**: `dtm.resolve(archiveType)` creates proper links (UUID match + source archive ref). `dtm.disassociate()` destroys them (new local UUID). `dtm.associateDataTypeWithArchive()` only sets the pointer, not the UUID — it does NOT restore sync capability.
 - **-process paths**: Takes a filename relative to the project subfolder. No `/` allowed in the name. Use the subfolder as part of the project path instead.

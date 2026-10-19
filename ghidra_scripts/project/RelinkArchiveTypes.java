@@ -1,5 +1,5 @@
 // RelinkArchiveTypes.java — Re-establish proper source archive links for types
-// that were previously disassociated (e.g. by SeverArchiveLinks).
+// that were previously disassociated (e.g. by severing archive links).
 //
 // After disassociate(), types get new local UniversalIDs that don't match the
 // archive's IDs, so Ghidra's "sync with archive" can't match them.
