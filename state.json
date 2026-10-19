@@ -1,6 +1,6 @@
 {
   "next_display_id": 105,
-  "next_comment_id": 48,
+  "next_comment_id": 49,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
     "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a": 64,
@@ -192,7 +192,7 @@
       "priority": "medium",
       "created_by": "driver",
       "created_at": "2026-05-07T19:16:51.049567779Z",
-      "updated_at": "2026-05-07T19:17:45.960541989Z",
+      "updated_at": "2026-10-19T20:47:58.677691681Z",
       "labels": [
         "feature",
         "scraper"
@@ -200,7 +200,18 @@
       "related": [
         "1717345c-aaec-43e8-836f-b5ea29d2eb34",
         "b6993a2d-d306-4c7b-94e1-69273d762af0"
-      ]
+      ],
+      "comments": {
+        "6f8ef1ba-d5b4-41bb-a9f4-e901fe31e727": {
+          "display_id": 48,
+          "author": "driver",
+          "content": "Still open: 478 ASUS (inferred provenance) and 748 manual images lack bios_version. Candidate: parse from AGESA strings/ROM date hints (scratch tools date_hints, manual_image_hints).",
+          "created_at": "2026-10-19T20:47:58.660781279Z",
+          "kind": "note",
+          "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZ8f8QISWA50fCzu+RRLDJ/HXFSu/G0663SqbKvCP5W2GP8s66fPS6aLfb2ivTQH38rcfqFSBJqR4tIdIxwM3Dg=="
+        }
+      }
     },
     "1b493262-3d67-423e-b318-f9672ed197af": {
       "uuid": "1b493262-3d67-423e-b318-f9672ed197af",
@@ -2243,8 +2254,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-19T20:47:52.546953470Z",
+    "timestamp": "2026-10-19T20:47:58.677691681Z",
     "agent_id": "driver",
-    "agent_seq": 53
+    "agent_seq": 54
   }
 }
