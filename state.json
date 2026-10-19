@@ -1,6 +1,6 @@
 {
   "next_display_id": 105,
-  "next_comment_id": 50,
+  "next_comment_id": 51,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
     "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a": 64,
@@ -367,7 +367,7 @@
       "priority": "high",
       "created_by": "driver",
       "created_at": "2026-05-07T19:17:30.609942704Z",
-      "updated_at": "2026-10-19T20:47:40.742482330Z",
+      "updated_at": "2026-10-19T23:48:59.267647088Z",
       "labels": [
         "feature",
         "scraper"
@@ -382,6 +382,15 @@
         "fbac55aa-545d-4ab0-8186-f83dabd160d3"
       ],
       "comments": {
+        "4d256ea5-fea9-4f1b-994c-2bf528537919": {
+          "display_id": 50,
+          "author": "driver",
+          "content": "2026-10-20 run: asus-server sp3/sp5/sp6 gave 4 new images (Milan BL 0.13.0.80, Rome 0.C.0.8C, 2x Genoa/Siena 0.29.1.A4). Dell v2.25.1 DUPs are an encrypted capsule (entropy 8.0, $RBU wrapper): extractor cannot work. Lenovo = encrypted .upd (NotImplemented). HPE/Tyan list 0 SP3/SP5 boards; Supermicro/Gigabyte-server 403. Remaining: non-blocked-IP runs of Supermicro/Gigabyte; AM5 boards not yet run.",
+          "created_at": "2026-10-19T23:48:59.259021900Z",
+          "kind": "note",
+          "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA5jVdsuWRQ6uHZ4/IxkIq8LSuK+Doe8YM8D3Dt6mNYxTOxRMH6isqXjP7ZWNEk3kIuogEhFL+zW6fVneWKWVWDw=="
+        },
         "dca48926-7abc-4126-b214-3361ad2c38b4": {
           "display_id": 45,
           "author": "driver",
@@ -2272,8 +2281,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-19T20:55:26.541748183Z",
+    "timestamp": "2026-10-19T23:48:59.267647088Z",
     "agent_id": "driver",
-    "agent_seq": 57
+    "agent_seq": 58
   }
 }
