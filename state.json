@@ -1,6 +1,6 @@
 {
   "next_display_id": 105,
-  "next_comment_id": 45,
+  "next_comment_id": 46,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
     "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a": 64,
@@ -327,7 +327,7 @@
       "priority": "high",
       "created_by": "driver",
       "created_at": "2026-05-07T19:17:30.609942704Z",
-      "updated_at": "2026-05-07T19:18:01.882306411Z",
+      "updated_at": "2026-10-19T20:47:40.742482330Z",
       "labels": [
         "feature",
         "scraper"
@@ -340,7 +340,18 @@
         "c67be19e-949f-43e4-829c-a9e36f575e0f",
         "ef4b17db-f2dd-4c1e-8216-807be1abf766",
         "fbac55aa-545d-4ab0-8186-f83dabd160d3"
-      ]
+      ],
+      "comments": {
+        "dca48926-7abc-4126-b214-3361ad2c38b4": {
+          "display_id": 45,
+          "author": "driver",
+          "content": "Scraping moved to the psp-db repo (board #624: psp-db discovers/downloads, psp-etl ingests via ingest-inbox). Remaining psp-etl work here is ingest + coverage reporting only; scraper changes belong in psp-db.",
+          "created_at": "2026-10-19T20:47:40.731084467Z",
+          "kind": "note",
+          "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABASVzfjRc0BPHxI4aWiFNsEIkw1zAlwYA57nuG1RuxlsV3SgHCpp4EiDr2kyoLqbYJgkU2SmWSej/Ym94A+tPjDA=="
+        }
+      }
     },
     "26f29284-47ac-4f48-93ee-d5fdc56061ec": {
       "uuid": "26f29284-47ac-4f48-93ee-d5fdc56061ec",
@@ -2210,8 +2221,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-19T20:47:34.936918872Z",
+    "timestamp": "2026-10-19T20:47:40.742482330Z",
     "agent_id": "driver",
-    "agent_seq": 50
+    "agent_seq": 51
   }
 }
