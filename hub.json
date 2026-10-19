@@ -1,0 +1,9 @@
+{
+  "hub_version": 3,
+  "migrated_from_commit": "413682ce85efdebe8ec9554c5238cd201a2ca570",
+  "migrated_at": "2026-10-19T20:46:07.253325748Z",
+  "genesis_checkpoint_commit": "6e7309325c754f41d409ae8951a9c3b7bbae1b13",
+  "seed_agent_tips": {
+    "driver": "cc7a450103cbaa7c1ec82cead2ee8af28eab69b9"
+  }
+}
