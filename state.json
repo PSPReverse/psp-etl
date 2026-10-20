@@ -116,6 +116,10 @@
     "103": {
       "agent_id": "driver",
       "claimed_at": "2026-10-19T20:55:26.541748183Z"
+    },
+    "105": {
+      "agent_id": "driver",
+      "claimed_at": "2026-10-20T00:01:59.158024685Z"
     }
   },
   "issues": {
@@ -2301,8 +2305,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-20T00:01:48.276522864Z",
+    "timestamp": "2026-10-20T00:01:59.158024685Z",
     "agent_id": "driver",
-    "agent_seq": 60
+    "agent_seq": 61
   }
 }
