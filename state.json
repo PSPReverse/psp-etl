@@ -1,5 +1,5 @@
 {
-  "next_display_id": 105,
+  "next_display_id": 106,
   "next_comment_id": 52,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
@@ -91,6 +91,7 @@
     "d2d42b52-9ed4-445e-8669-319708188001": 48,
     "d5eab388-a707-470f-81c8-1af951ce0d0f": 90,
     "d89ea3c6-7527-421f-86ce-c45316bec1f2": 38,
+    "d97add70-9120-48ae-95e8-012e189545c0": 105,
     "ddd2f5e4-a880-4e06-9587-735f14d928ca": 93,
     "e5bcc9d5-1414-4908-810d-95e573d39e36": 63,
     "e68ee15d-cd46-4230-88c1-5d3b420c1872": 89,
@@ -1913,6 +1914,16 @@
         "feature"
       ]
     },
+    "d97add70-9120-48ae-95e8-012e189545c0": {
+      "uuid": "d97add70-9120-48ae-95e8-012e189545c0",
+      "display_id": 105,
+      "title": "kaizen: rebuild corpus DB to pick up BL-version generation labels",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "driver",
+      "created_at": "2026-10-20T00:01:48.276522864Z",
+      "updated_at": "2026-10-20T00:01:48.276522864Z"
+    },
     "ddd2f5e4-a880-4e06-9587-735f14d928ca": {
       "uuid": "ddd2f5e4-a880-4e06-9587-735f14d928ca",
       "display_id": 93,
@@ -2290,8 +2301,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-19T23:49:09.215694543Z",
+    "timestamp": "2026-10-20T00:01:48.276522864Z",
     "agent_id": "driver",
-    "agent_seq": 59
+    "agent_seq": 60
   }
 }
