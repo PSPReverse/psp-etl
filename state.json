@@ -1,6 +1,6 @@
 {
   "next_display_id": 108,
-  "next_comment_id": 55,
+  "next_comment_id": 56,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
     "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a": 64,
@@ -890,7 +890,7 @@
       "priority": "medium",
       "created_by": "driver",
       "created_at": "2026-10-20T00:03:57.224951284Z",
-      "updated_at": "2026-10-20T00:04:27.792922509Z",
+      "updated_at": "2026-10-20T00:04:53.334359978Z",
       "labels": [
         "kaizen"
       ],
@@ -903,6 +903,15 @@
           "kind": "note",
           "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA7zcD4D2EnkfmTWd3Mx8gcOWA7tywTQj8sD6+31u3/j1Cuy8tG0MRl9vMZoZxvVpm86H4qqg1M9Uz6O1/JnbACg=="
+        },
+        "ccaf8382-d116-45ff-8575-c4da4c86c53d": {
+          "display_id": 55,
+          "author": "driver",
+          "content": "2026-10-20 check: Tyan S8050 (BL 0.3D.0.7A) ROM embeds BOTH GenoaPI-SP5 1.0.0.G and TurinPI-SP5 1.0.0.7, i.e. a dual-generation BIOS: BL 0.3D alone does not prove zen5 only; keep unmapped (or fan out zen4+zen5 like PSPTool multi-gen directories). ASUS sTR5/sWRX9 ROMs (BL 0.2A.0.1C) carry no *PI strings: needs another signal. Not mapped.",
+          "created_at": "2026-10-20T00:04:53.328430330Z",
+          "kind": "note",
+          "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAyIjMVF4VOuwfsBB8s4QbJBDgWf/0FTnDT0dXvEmgp48HYldVK7jjuNIO75TfmBduBIUp3jr3iFE9RsMZ6cOxAg=="
         }
       }
     },
@@ -2377,8 +2386,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-20T00:04:27.792922509Z",
+    "timestamp": "2026-10-20T00:04:53.334359978Z",
     "agent_id": "driver",
-    "agent_seq": 71
+    "agent_seq": 72
   }
 }
