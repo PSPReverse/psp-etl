@@ -1,6 +1,6 @@
 {
   "next_display_id": 106,
-  "next_comment_id": 52,
+  "next_comment_id": 53,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
     "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a": 64,
@@ -1926,10 +1926,21 @@
       "priority": "medium",
       "created_by": "driver",
       "created_at": "2026-10-20T00:01:48.276522864Z",
-      "updated_at": "2026-10-20T00:02:06.027945121Z",
+      "updated_at": "2026-10-20T00:02:14.533117341Z",
       "labels": [
         "kaizen"
-      ]
+      ],
+      "comments": {
+        "b6eed66e-74ee-43e9-8759-a9c79611877d": {
+          "display_id": 52,
+          "author": "driver",
+          "content": "Evidence: 12/16 SP3 and 28 of 38 BL-bearing unlabelled images get zen_generation from claude/psp-etl-bl-version-gen (06c10e5f); live DB still has NULLs. Change: run ingest/analyze/select rebuild (project rule: no migrations). Effort S (long run, needs MemAvailable check). Risk low.",
+          "created_at": "2026-10-20T00:02:14.527932966Z",
+          "kind": "note",
+          "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA+G5SL/lYsl0CUSsRMZIzwTNkO/jdfRbVUgfUfYI4HN6umSDLyS4NWyTU179HcXHseTkJztt9Qyb6CI95AA9EAA=="
+        }
+      }
     },
     "ddd2f5e4-a880-4e06-9587-735f14d928ca": {
       "uuid": "ddd2f5e4-a880-4e06-9587-735f14d928ca",
@@ -2308,8 +2319,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-20T00:02:06.027945121Z",
+    "timestamp": "2026-10-20T00:02:14.533117341Z",
     "agent_id": "driver",
-    "agent_seq": 62
+    "agent_seq": 63
   }
 }
