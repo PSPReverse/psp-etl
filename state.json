@@ -890,7 +890,10 @@
       "priority": "medium",
       "created_by": "driver",
       "created_at": "2026-10-20T00:03:57.224951284Z",
-      "updated_at": "2026-10-20T00:03:57.224951284Z"
+      "updated_at": "2026-10-20T00:04:14.969528908Z",
+      "labels": [
+        "kaizen"
+      ]
     },
     "69b24a6e-91cf-4a15-95d0-9cd9fd75964c": {
       "uuid": "69b24a6e-91cf-4a15-95d0-9cd9fd75964c",
@@ -2363,8 +2366,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-20T00:04:05.726777263Z",
+    "timestamp": "2026-10-20T00:04:14.969528908Z",
     "agent_id": "driver",
-    "agent_seq": 69
+    "agent_seq": 70
   }
 }
