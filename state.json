@@ -1,6 +1,6 @@
 {
   "next_display_id": 107,
-  "next_comment_id": 53,
+  "next_comment_id": 54,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
     "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a": 64,
@@ -571,10 +571,21 @@
       "priority": "medium",
       "created_by": "driver",
       "created_at": "2026-10-20T00:02:25.866565389Z",
-      "updated_at": "2026-10-20T00:03:45.782442488Z",
+      "updated_at": "2026-10-20T00:03:51.567423383Z",
       "labels": [
         "kaizen"
-      ]
+      ],
+      "comments": {
+        "446521e3-0ceb-4abb-ae9c-3afa3114c6bb": {
+          "display_id": 53,
+          "author": "driver",
+          "content": "Evidence: Dell v2.25.1 encrypted capsule, Lenovo encrypted .upd, Supermicro/Gigabyte 403, HPE/Tyan 0 boards (2026-10-20 run, board #912 range). Change: make scrape print one structured reason per vendor and a summary table so a run answers 'what is blocked and why' without manual probing. Effort S, risk low.",
+          "created_at": "2026-10-20T00:03:51.561154912Z",
+          "kind": "note",
+          "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAaGBIzF1OVlzqx3OC9Ko7ecszkpfgaPHC/40gB56MgsHuLpPcADm5uJmJsABNe8y2/DQI7eeYCAnkPGgYhvRrCg=="
+        }
+      }
     },
     "3103797d-347c-4fa3-8de6-05fe000b872e": {
       "uuid": "3103797d-347c-4fa3-8de6-05fe000b872e",
@@ -2337,8 +2348,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-10-20T00:03:45.782442488Z",
+    "timestamp": "2026-10-20T00:03:51.567423383Z",
     "agent_id": "driver",
-    "agent_seq": 66
+    "agent_seq": 67
   }
 }
