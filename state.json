@@ -1,6 +1,6 @@
 {
   "next_display_id": 108,
-  "next_comment_id": 62,
+  "next_comment_id": 63,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
     "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a": 64,
@@ -1276,12 +1276,23 @@
       "priority": "medium",
       "created_by": "driver",
       "created_at": "2026-05-06T14:17:23.793817284Z",
-      "updated_at": "2026-05-06T14:17:23.956478998Z",
+      "updated_at": "2026-11-16T21:16:54.833359325Z",
       "labels": [
         "feature",
         "fuzzing",
         "ghidra"
-      ]
+      ],
+      "comments": {
+        "d3ae1339-9cbf-4a9f-9a61-07975128b748": {
+          "display_id": 62,
+          "author": "driver",
+          "content": "Partial: TBB/TBH switch following landed locally (resolveHandlers, 32-insn scan). Verified on zen5 TrustedOS v0.2B.0.49: no '?' left; 2 commands single-handler, 5 (0x06,0x2D,0x33,0x6A,0x6F) fan out to the same 3 handlers (nested compare tree ending in TBB) and are not labelled. Follow-up: compare-tree walk tracking per-command path.",
+          "created_at": "2026-11-16T21:16:54.828902875Z",
+          "kind": "note",
+          "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAz5QQ6t1RVzW7iBE4h1vPHjcGb4rdtyEH/pAv2VFTJr7CrLT/dJ2qRjUgw5MwBkAesHv2OmDtHCWjcl/uEmLlBw=="
+        }
+      }
     },
     "885924c2-807e-4e13-ba54-50decd26a2a8": {
       "uuid": "885924c2-807e-4e13-ba54-50decd26a2a8",
@@ -2436,8 +2447,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-11-16T21:04:18.949440790Z",
+    "timestamp": "2026-11-16T21:16:54.833359325Z",
     "agent_id": "driver",
-    "agent_seq": 79
+    "agent_seq": 80
   }
 }
