@@ -1,5 +1,5 @@
 {
-  "next_display_id": 108,
+  "next_display_id": 109,
   "next_comment_id": 65,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
@@ -58,6 +58,7 @@
     "8d0ea8ff-507f-4ea1-9c46-728fc6461d1b": 41,
     "8ea697a2-8a5e-4fba-976a-532ad5788b34": 102,
     "8f5a85ba-9954-4e58-84c9-9e4bd3bd01c1": 84,
+    "90a645bf-cfbc-4697-93dd-e897f4a0d375": 108,
     "90a7efbb-8fb8-4c54-a64a-8615fcca9394": 13,
     "9146a442-2b26-499f-aaab-1d83b37d35fc": 65,
     "9288b29c-d8a1-4e93-9db3-dd3930aeea84": 51,
@@ -1391,6 +1392,16 @@
         "d5eab388-a707-470f-81c8-1af951ce0d0f"
       ]
     },
+    "90a645bf-cfbc-4697-93dd-e897f4a0d375": {
+      "uuid": "90a645bf-cfbc-4697-93dd-e897f4a0d375",
+      "display_id": 108,
+      "title": "ApplyLabelFile.java does not compile on Ghidra 12.2 (ApplyFunctionSignatureCmd takes FunctionRenameOption); nix-shell -A shell ships 12.0.2 which cannot open projects saved by 12.2",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "driver",
+      "created_at": "2026-11-17T06:18:43.597491565Z",
+      "updated_at": "2026-11-17T06:18:43.597491565Z"
+    },
     "90a7efbb-8fb8-4c54-a64a-8615fcca9394": {
       "uuid": "90a7efbb-8fb8-4c54-a64a-8615fcca9394",
       "display_id": 13,
@@ -2465,8 +2476,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-11-17T00:44:56.309932045Z",
+    "timestamp": "2026-11-17T06:18:43.597491565Z",
     "agent_id": "driver",
-    "agent_seq": 82
+    "agent_seq": 83
   }
 }
