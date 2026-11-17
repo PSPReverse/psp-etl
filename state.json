@@ -1,6 +1,6 @@
 {
   "next_display_id": 108,
-  "next_comment_id": 64,
+  "next_comment_id": 65,
   "display_id_map": {
     "0060d4bc-5f85-46b8-910d-5682e001bfeb": 50,
     "0a0d7ea2-e6f6-4c70-a0a5-39bee6b8fd9a": 64,
@@ -1276,13 +1276,22 @@
       "priority": "medium",
       "created_by": "driver",
       "created_at": "2026-05-06T14:17:23.793817284Z",
-      "updated_at": "2026-11-16T21:53:03.812108775Z",
+      "updated_at": "2026-11-17T00:44:56.309932045Z",
       "labels": [
         "feature",
         "fuzzing",
         "ghidra"
       ],
       "comments": {
+        "71dca82f-f4ab-4b7a-9425-fb9223b25b71": {
+          "display_id": 64,
+          "author": "driver",
+          "content": "Fixed locally (command scan in LabelMailboxHandlers). Cause: the scan took the branch target of the last compare per command; 0x53's only compare is a BNE (target = invalid-command stub) and 0x03's last compare is the common epilogue re-test. Now BNE uses the fall-through, epilogue compares don't replace an earlier target that reaches a handler, and the path walk also runs when the scan yields no single handler. Headless on a copy, zen5 TrustedOS v0.2B.0.49, 28 commands: before 25 resolved / 0 fanout / 3 '?' (0x03, 0x53, 0x6A); after 27 resolved / 0 fanout / 1 '?' (0x6A, invalid-command stub, as before). 0x03 now shares the common pre-handler with 0x07/0x1F/0x28/0x29/0x2A/0x35/0x3C/0x4B; 0x53 gets its own handler. Side effects (corrections): 0x60 previously reported 0x53's handler, now its own; 0x1B/0x30 previously got the default unlisted-command handler, now own handlers; 0x40 now shares the pre-handler; 0x2D stays on the default handler. NOTE: the live project already carries the old (wrong) names on the default handler and the 0x53/0x60 handler; relabel needed after re-running (script skips user-named functions).",
+          "created_at": "2026-11-17T00:44:56.303299148Z",
+          "kind": "note",
+          "signed_by": "SHA256:JU/ufeJf3f6H4g8Ubjy20MKShQdHVWb1UkSye2SkdsA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgMfrXz7cbzVijbR/XRsq7ryV60cujBFZymuytSfX9zMIAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABARx+5Bn518l2+QYFcJJmewyx6lRIIaFEZ8HLnY50oT7zJ4u5DrH3o8MJbARTapoJGMEPlE0Uct/7fF+8TWIWmCA=="
+        },
         "d3ae1339-9cbf-4a9f-9a61-07975128b748": {
           "display_id": 62,
           "author": "driver",
@@ -2456,8 +2465,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-11-16T21:53:03.812108775Z",
+    "timestamp": "2026-11-17T00:44:56.309932045Z",
     "agent_id": "driver",
-    "agent_seq": 81
+    "agent_seq": 82
   }
 }
