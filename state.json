@@ -1400,7 +1400,10 @@
       "priority": "medium",
       "created_by": "driver",
       "created_at": "2026-11-17T06:18:43.597491565Z",
-      "updated_at": "2026-11-17T06:18:43.597491565Z"
+      "updated_at": "2026-11-17T06:18:49.255913583Z",
+      "labels": [
+        "bug,ghidra"
+      ]
     },
     "90a7efbb-8fb8-4c54-a64a-8615fcca9394": {
       "uuid": "90a7efbb-8fb8-4c54-a64a-8615fcca9394",
@@ -2476,8 +2479,8 @@
   },
   "next_milestone_id": 5,
   "watermark": {
-    "timestamp": "2026-11-17T06:18:43.597491565Z",
+    "timestamp": "2026-11-17T06:18:49.255913583Z",
     "agent_id": "driver",
-    "agent_seq": 83
+    "agent_seq": 84
   }
 }
